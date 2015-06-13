@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source_if() { test -e "$1" && source "$@"; }
+get_script_directory () {
+  local arg0="$1"
+  test -h "$arg0" && arg0="$(readlink -f "$arg0")"
+  dir="${arg0%/*}"
+  if test "$dir" != "$arg0"; then
+    echo -n "$dir"
+  else
+    echo -n "$MWGDIR/mcxx"
+  fi
+}
+
+#------------------------------------------------------------------------------
+# create library
+
+if test $# -eq 0; then
+  echo "usage: cxxar NAME [objectfiles...]" > /dev/stderr
+  echo "  the target library is libNAME.a or NAME.lib" > /dev/stderr
+  exit 1
+fi
+
+#------------------------------------------------------------------------------
+# source
+
+: ${MWGDIR:=$HOME/.mwg}
+export CXXDIR="$(get_script_directory "$0")"
+
+source "$CXXDIR/cxx_pref-get.sh"
+source_if "$CXXDIR2/config.src"
+if test -f "$CXXDIR2/cxxar"; then
+  "$CXXDIR2/cxxar" "$@"
+else
+  "$CXXDIR/cxxar-default.sh" "$@"
+fi

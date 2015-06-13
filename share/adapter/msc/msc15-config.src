@@ -1,0 +1,52 @@
+# -*- mode:sh -*-
+
+#------------------------------------------------------------------------------
+# "C:\Program Files\Microsoft Visual Studio 9.0\VC\vcvarsall.bat"
+
+wP32DIR='%%wPDIR%%'
+wWINDIR='%%wWDIR%%'
+uP32DIR='%%uPDIR%%'
+wWINDIR='%%uWDIR%%'
+wVSDIR="$wP32DIR\Microsoft Visual Studio 9.0"
+uVSDIR="$uP32DIR/Microsoft Visual Studio 9.0"
+
+wP64DIR='C:\Program Files'
+uP64DIR='/cygdrive/c/Program Files'
+
+export VCINSTALLDIR="$wVSDIR"'\VC\'
+export VS100COMNTOOLS="$wP32DIR"'\Microsoft Visual Studio 10.0\Common7\Tools\'
+export VS90COMNTOOLS="$wP32DIR"'\Microsoft Visual Studio 9.0\Common7\Tools\'
+export VSINSTALLDIR="$wVSDIR"'\'
+export VSSDK90Install="$wP32DIR"'\Microsoft Visual Studio 2008 SDK\'
+export WindowsSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v7.0A\'
+
+export FrameworkDIR32="$wWINDIR"'\Microsoft.NET\Framework\'
+export FrameworkDir="$wWINDIR"'\Microsoft.NET\Framework\'
+export FrameworkVersion='v2.0.50727'
+# export FrameworkVersion32='v2.0.50727'
+# export Framework35Veresion='v3.5'
+export DevEnvDir="$wVSDIR"'\Common7\IDE\'
+# export FSHARPINSTALLDIR="$wP32DIR"'\Microsoft F#\v4.0\'
+
+export INCLUDE="${VCINSTALLDIR}include;${VCINSTALLDIR}atlmfc\include;${WindowsSdkDir}Include"
+export LIB="${VCINSTALLDIR}LIB;${VCINSTALLDIR}atlmfc\lib;${WindowsSdkDir}Lib"
+export LIBPATH="${FrameworkDir}v3.5;${FrameworkDir}v2.0.50727;${LIB}"
+
+# setting search paths
+vs10paths="$uVSDIR/VSTSDB/Deploy:$uVSDIR/Common7/IDE/:$uVSDIR/VC/BIN:$uVSDIR/Common7/Tools"
+netfxpaths="$uWINDIR/Microsoft.NET/Framework/v4.0.21006:$uWINDIR/Microsoft.NET/Framework/v3.5"
+vs10tools="$uVSDIR/VC/VCPackages:$uP32DIR/HTML Help Workshop:$uVSDIR/Team Tools/Performance Tools"
+wsdkpaths="$uP32DIR/Microsoft SDKs/Windows/v7.0A/bin/NETFX 4.0 Tools:$uP32DIR/Microsoft SDKs/Windows/v7.0A/bin"
+export PATH="$uP32DIR/Microsoft F#/v4.0/:$vs10paths:$netfxpaths:$vs10tools:$wsdkpaths:$PATH"
+#------------------------------------------------------------------------------
+
+source_if "${CXXDIR:-$HOME/.mwg/mcxx}/local/m/loadlib.src" vc
+
+if test "x$1" == xcxx; then
+  CXX="$CXXDIR/share/adapter/msc/cxx.sh"
+  CC="$CXXDIR/share/adapter/msc/cxx.sh"
+  #source_if $UNIDIR/cpplibs/setup_libs_vc.src
+elif test "x$1" == xenv; then
+  alias cl='cl.exe -EHsc'
+  echo ".... setup i686-win-vs-2008"
+fi

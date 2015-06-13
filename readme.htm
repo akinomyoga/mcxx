@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta http-equiv="Content-Script-Type" content="text/css" />
+  <title>mcxx</title>
+  <link rel="stylesheet" type="text/css" charset="utf-8" href="http://tkynt2.phys.s.u-tokyo.ac.jp/~murase/agh/mwg.slide.css" />
+  <link rel="stylesheet" type="text/css" charset="utf-8" href="http://tkynt2.phys.s.u-tokyo.ac.jp/~murase/agh/prog.std.css" />
+  <meta name="agh-fly-type" content="color" />
+  <script type="text/javascript" charset="utf-8" src="http://tkynt2.phys.s.u-tokyo.ac.jp/~murase/agh/agh.fly.js"></script>
+</head>
+<body>
+<h1>Manual Page of mcxx - myoga c++ compiler handler</h1>
+<h2>Manual</h2>
+<h3>Name</h3>
+<p>mcxx - myoga c++ compiler handler</p>
+<p>複数の C/C++ コンパイラを単一のインターフェイスで利用する為のコマンドです。
+各コンパイラを識別する為の文字列として key (CXXKEY) 及び prefix (CXXPREFIX) を使用します。
+prefix は例えば "i686-cygwin-gcc-4.7.3" の様な物で、
+コンパイラ依存のヘッダ・ライブラリは prefix と同名のサブディレクトリ以下に配置されます。
+key はコンパイラを簡易に指定する為の短い名前で、例えば "c" 等の様な物になります。
+環境変数 CXXKEY に key を指定する事で、使用するコンパイラを切り替える事ができます。
+</p>
+
+<h3>Install</h3>
+<p>mcxx.tar.xz を展開して中で make install を実行して下さい。
+MWGDIR=$HOME/.mwg 以下にインストールされます。
+インストールの過程で $MWGDIR/bin 及び $MWGDIR/mcxx にファイルがコピーされ自動設定が行われます。
+インストール先を変更する場合は MWGDIR 環境変数を設定して make install を実行して下さい。
+</p>
+
+<h3>Usage</h3>
+<pre class="agh-prog-bash">
+cxx <strong>[</strong><i>options</i><strong>]</strong> <i>files</i>
+cxx +<i>operations</i> <strong>[</strong><i>args</i><strong>]</strong>
+</pre>
+
+<h4><i>operations</i></h4>
+<ul>
+<li>cxx +version
+  <p>shows the version of mcxx.</p>
+</li>
+<li>cxx +version <i>require</i> [2.0.2 or later]
+  <p>tests version is greater or equals to the specified version <i>require</i>.
+  The format of <i>require</i> is the same as the result of
+  <code>printf "%d%02d%02d" major minor patch</code>.
+  </p>
+</li>
+<li>cxx +help
+  <p>shows simple help texts.</p>
+</li>
+<li>cxx +prefix</li>
+<li>cxx +prefix get
+  <p>shows cxxprefix for current environment.</p>
+</li>
+<li>cxx +prefix list
+  <p>show the list of cxxkeys and cxxprefices.</p>
+</li>
+<li>CXX=<i>c++-compiler</i> CC=<i>c-compiler</i> cxx +prefix add
+  <p class="marked">usage:</p>
+<pre class="agh-prog-bash">
+export CC=<i>c-compiler</i>
+export CXX=<i>c++-compiler</i>
+cxx +prefix add
+</pre>
+  <p>interactively registers a CXXKEY and CXXPREFIX pair for the specified compilers.</p>
+</li>
+<li>cxx +prefix auto
+  <p>automatically detects compilers, and interactively registers them.</p>
+</li>
+<li>cxx +prefix remove <i>key/prefix</i> [2.11 or later]</li>
+<li>cxx +prefix set-default <i>key/prefix</i> [2.11 or later]</li>
+<li>cxx +prefix set-key <i>oldkey/prefix</i> <i>newkey</i> [2.12 or later]</li>
+<li>cxx +config <i>listfile</i>
+  <p>create cxx_conf.h from <i>listfile</i>.
+  Each line in a <i>listfile</i> corresponds to an item to check.
+  A line in a <i>listfile</i> takes one of the following forms:
+  </p>
+  <ol>
+  <li>P <i>line</i>
+    <p>指定した行を直接出力します。</p>
+  </li>
+  <li>D <i>MACRO_NAME</i> <strong>[</strong><i>macro_value</i><strong>]</strong>
+    <p>指定したマクロの定義を出力します。</p>
+  </li>
+  <li>H <i>foobar.h</i> <strong>[</strong><i>MWGCONF_HEADER_FOOBAR_H</i><strong>]</strong>
+    <p>指定したヘッダファイル <i>foobar.h</i> が存在するかチェックし、
+    存在する場合にマクロ <i>MWGCONF_HEADER_FOOBAR_H</i> の定義を出力します。
+    <i>MWGCONF_HEADER_FOOBAR_H</i> の指定を省略した場合、
+    マクロ名は "MWGCONF_HEADER_(<i>foobar.h</i> のアルファベットを英大文字にし記号を _ で置き換えた文字列)" になります。
+    </p>
+    <p><i>foobar.h</i> : an include file to check its existence</p>
+    <p><i>MWGCONF_HEADER_FOOBAR_H</i> : the macro defined when <i>foobar.h</i> exists.
+      default is "MWGCONF_HEADER_<strong>${</strong><i>foobar.h:changing to uppercase and replacing symbols with underscore</i><strong>}</strong>"
+    </p>
+  </li>
+  <li>X <i>name</i> <i>headers</i> <i>expression</i>
+    <p><i>headers</i>: headers to include, connected with spaces in a single argument.</p>
+    <p><i>MWGCONF_HAS_NAME</i>: the macro defined when <i>source</i> is compiled.</p>
+  </li>
+  <li>S <i>name</i> <i>headers</i> <i>source</i>
+    <p><i>MWGCONF_NAME</i>: the macro defined when <i>source</i> is compiled.</p>
+  </li>
+  <li>M <i>name</i> <i>headers</i> <i>macro</i>
+    <p><i>MWGCONF_NAME</i>: the macro defined when <i>macro</i> is defined.</p>
+  </li>
+  </ol>
+</li>
+<li>cxx +config clean</li>
+<li>cxx +get cxxdir</li>
+<li>cxx +get env-source</li>
+<li>cxx +get input-charset</li>
+</ul>
+
+<h1>mcxx - Development</h1>
+
+<h2>ToDo</h2>
+<ul>
+<li>2013-10-26
+  <ul>
+  <li>cxx +traits, cxx +param の完全廃止。</li>
+  <li>cxx_make.sh: 各種 make 機能。OUTDIR 対応。compile, link, install, </li>
+  </ul>
+</li>
+<li>2013-10-24
+  <ul>
+  <li>gcc, mingw に関するインストール・実行などのスクリプトを独立させる (現在の cl の様に)。</li>
+  <li>ディレクトリの再配置案
+    <ul>
+    <li>share/adapter: コンパイラ依存のスクリプトなど (add_msc.sh, cxxar-vc.sh, cxx-cl.sh など)</li>
+    <li>share/tests: cxx_conf.sh の既定のテストソースコード</li>
+    <li>share/m.new: 現在の m.tmpl [完]</li>
+    <li>local/prefix: 現在の cxx_pref [完]</li>
+    <li>local/m: 現在の m [完]</li>
+    <li>local/include: コンパイラ毎の既定インストール先</li>
+    <li>local/lib: コンパイラ毎の既定インストール先</li>
+    </ul>
+  </li>
+  </ul>
+</li>
+<li>2013-03-08 以前
+  <ul>
+  <li>バージョンアップ機能。自動的に昔の設定を引き継ぐ
+    <ul>
+    <li>単に上書きをすれば version up になる。
+      単なる上書きでは済まない場合は、自動的に m の中身を更新するスクリプトを書く。
+      (従って、update 用のスクリプトを呼び出す様にしておく必要はある)。
+    </li>
+    <li>配布 url を固定する。</li>
+    </ul>
+  </li>
+  <li>prefix:
+    <ul>
+    <li>icc では gcclibs.src を source しない (または、icc で source する)。</li>
+    <li>icc で -gcc-name 及び -gxx-name を自動で追加する?</li>
+    <li>cxx +prefix add: 
+      その時の CXXKEY, CXXPREFIX,
+      FLAGS, CFLAGS, CXXFLAGS, INCLUDE_PATH,
+      C_INCLUDE_PATH, CPLUS_INCLUDE_PATH, LIBRARY_PATH
+      を取り込む様にする。
+    </li>
+    </ul>
+  </li>
+  </ul>
+</li>
+</ul>
+
+<h2>M1. Miscellaneous</h2>
+
+<h3>M1.1 インストール用のスクリプトに関し @2013-10-24</h3>
+<div class="note">
+  インストール用のスクリプト @2013-03-08 以前
+  <ul>
+  <li>既存のディレクトリへのコピー</li>
+  <li>パスの通っている場所への symbolic link</li>
+  <li><del>echox を中に取り込む事</del> 完</li>
+  <li>デフォルトの CXXKEY を決定して、cxx_pref/key+default.stamp に書き込む事</li>
+  </ul>
+</div>
+
+<p>インストール用のスクリプト install.sh を作成し、
+make install でこれを実行する様に設定する。
+既定で $HOME/.mwg/mcxx 以下にファイルをコピーする
+(但し、既に其処にコピーされている場合にはコピーを省略する)。
+次に、$HOME/.mwg/bin 以下にシンボリックリンクを貼り、
+$HOME/.mwg/bin にパスを通せばコマンドを使える様にする。
+また、自動構成 cxx +prefix auto を走らせて、
+コンパイラの情報を登録する。
+</p>
+
+
+<h2>ChangeLog</h2>
+<ul>
+<li>2015-04-27, KM, mcxx-2.1.10
+  <ul>
+  <li>cxx_conf.sh: より複雑な引数に対応。</li>
+  </ul>
+</li>
+<li>2014-07-13, KM, mcxx-2.1.9
+  <ul>
+  <li>cxx_conf.sh: MWGCONF_HAVE_ を MWGCONF_HAS_ に変更 (やはり述語は三単現にするのが一般的である)</li>
+  </ul>
+</li>
+<li>2014-06-25, KM, mcxx-2.1.8
+  <ul>
+  <li>cxx_conf.sh: bugfix, 複雑なテストでファイル名の長さ制限に引っかかる
+    →適当な長さで折り返して加算してから base64 符号化する様に変更。</li>
+  <li>cxx_conf.sh(mwg_base64_table): '/' を '%' に変更。'/' はディレクトリ名の区切の為、ファイル名には使用できない。</li>
+  </ul>
+</li>
+<li>2013-11-03, KM, mcxx-2.1.7
+  <ul>
+  <li>cxx_pref.sh, share/adapter/mingw, share/adapter/gcc: mingw, gcc に関する部分を分離・独立。</li>
+  <li>cxx_pref.sh, adapter/gcc, adapter/msc: detect-compilers 実装。</li>
+  <li>cxx: bugfix, CXXDIR 判定に失敗していた。$0 を使うべき所 $1 を使っていた。</li>
+  <li>adapter/msc/prefix.sh(msc.detect-compilers): Win7 では Program Files (x86) と Program Files の両方があるのに対応 (実際はどちらか一方だと思われるが)。</li>
+  </ul>
+</li>
+<li>2013-10-30, KM, mcxx-2.1.6
+  <ul>
+  <li>ext/mydoc1.sh: 適当な書式言語を作って mydoc1 として独立して作成、それを ext に取り込む事にした。</li>
+  <li>cxx_pref.sh(cxx +prefix help): 追加。ext/mydco1.sh を使って表示する。</li>
+  <li>install.sh: bugfix, mkdir -p $MWGDIR/mcxx を実行していなかった</li>
+  <li>cxx_pref.sh(cxx +prefix set-key): bugfix, default でない場合に exit code 1 で終了していた</li>
+  <li>bug: +prefix set-default で既定のコンパイラを変更しても +prefix list に反映されない。</li>
+  </ul>
+</li>
+<li>2013-10-27, KM, mcxx-2.1.5
+  <ul>
+  <li>cxx_make.sh(cxx +make c): 対応。但し、何をしたかったのか分からなくなった</li>
+  <li>adapter/msc/cxx.sh: bugfix, SUNPRO_DEPENDENCIES_OUTPUT を指定しても DEPENDENCIES_OUTPUT に出力される。</li>
+  </ul>
+</li>
+<li>2013-10-26, KM, mcxx-2.1.4
+  <ul>
+  <li>cxx_conf.sh(cxx +traits): 出力ファイル名の自動決定時、拡張子 .sh を除く様に変更。</li>
+  <li>cxx_conf.sh(cxx +config): cxx +traits から cxx +config に変更。</li>
+  <li>cxx_conf.sh(cxx +config): 既定の入力ファイル名を config.sh に変更。</li>
+  <li>cxx_pref.sh(cxx +prefix auto): bugfix, 登録しなかった時に set-default をしようとしてエラーになる→見付からなかった時の判定</li>
+  <li>cxx_pref.sh(cxx +prefix auto): bugfix, 自動で提案される prefix が既に使用されている→.stamp ファイル名の指定を誤っていた</li>
+  <li>share/adapter/msc: vc(cl) 関連のスクリプト cxx-cl.sh cxxar-vc.sh cxx_pref-add_msc* を share/adapter 以下に移動する。</li>
+  <li>share/adapter/mingw: cxxar-mingw.sh を移動。</li>
+  </ul>
+</li>
+<li>2013-10-24, KM, mcxx-2.1.3
+  <ul>
+  <li>install.sh: 自動インストールのスクリプトを記述。</li>
+  <li>usage: cxx +param を cxx +get に変更</li>
+  <li>cxx_conf.sh:P: 行を直接出力するコマンドを定義 (今迄は fdout.print を呼び出していた)</li>
+  <li>cxx_conf.sh: bugfix,
+    例えば cxx +traits bash などとすると /usr/bin/bash を source しようとする。
+    先頭に ./ を付加して呼び出す様に変更。</li>
+  <li>mcxx/cxx_pref: mcxx/local/prefix に移動</li>
+  <li>mcxx/m_pref: mcxx/local/m に移動</li>
+  <li>mcxx/m.tmp: mcxx/share/m.new に移動</li>
+  <li>local/m/gccflags.src, local/m/loadlib.src を統合して一つ (local/m/common.src) にする。</li>
+  <li>local/m/common.src: 元々 cxx から読み込んでいたが、今迄の loadlib.src 等の様に  m/*/config.src を介して読み込む様に変更。</li>
+  <li>update.sh: local/m の仕様変更に伴い、内容を書き換えるスクリプトを作成。</li>
+  </ul>
+</li>
+<li>2013-10-23, KM, mcxx-2.1.2
+  <ul>
+  <li>usage: cxx +prefix set-key &lt;cxxkey/prefix&gt; &lt;newkey&gt; 対応
+    <p><del>prefix 編集機能: 既に作成した設定の cxxkey の変更</del></p>
+  </li>
+  </ul>
+</li>
+<li>2013-10-21, KM, mcxx-2.1.1
+  <ul>
+  <li>usage: cxx mwg prefix remove &lt;cxxkey/cxxprefix&gt; 対応</li>
+  <li>usage: cxx mwg prefix set-default &lt;cxxkey/cxxprefix&gt; 対応
+    <p><del>prefix 編集機能: デフォルトの cxxkey の変更</del></p>
+  </li>
+  <li>usage: cxx mwg * の形式を cxx +* に変更 (取り敢えずは mwg の形式も保持するが廃止予定)。</li>
+  </ul>
+</li>
+<li>2013-07-13, KM, mcxx-2.0.10
+  <ul>
+  <li>cxx_pref.sh: --version だけでは mingw の判定を仕切れない事があるので、
+    __MINGW32__ Predefined Macro も判定で併用する様に変更。
+  </li>
+  <li>cxx mwg prefix add:
+    自動で mingw かどうかを判定し、
+    mingw 用の config.src を生成するようにする
+  </li>
+  </ul>
+</li>
+<li>2013-07-10, KM, mcxx-2.0.9
+  <ul>
+  <li>GCCFLAGS 変数は使用されていない様なので廃止。
+    代わりに各 config.src または gccflags.src で FLAGS に適切な設定を追加する。
+  </li>
+  </ul>
+</li>
+<li>2013-03-08, KM, mcxx-2.0.8
+  <ul>
+  <li>Makefile: mat, test_cxx を dist から除外</li>
+  <li>cxx_pref.sh: ICC の C++ Compiler として icpc を呼び出す様に変更</li>
+  </ul>
+</li>
+<li>2013-02-22, KM, mcxx-2.0.7
+  <ul>
+  <li>cxx-cl.sh: /link を vc のオプションとして解釈。以降の - 以外で始まる引数を全てリンカに渡す。</li>
+  <li>cxx-cl.sh: -O0 -O -O1 -O2 -Os -fomit-frame-pointer -fno-omit-frame-pointer -g に対応</li>
+  <li>cxx-cl.sh: -MP -MT -MF -MD に対応</li>
+  <li>cxx-cl.sh: 環境変数 DEPENDENCIES_OUTPUT, SUNPRO_DEPENDENCIES に対応</li>
+  <li>cxx-cl.sh: -W* -std=* を無視</li>
+  <li>cxx-cl.sh: [bugfix] -M を指定した時に作られる一時ファイルの名前に問題。ディレクトリ部分を分離する様に修正。</li>
+  </ul>
+</li>
+<li>2013-02-20, KM, mcxx-2.0.6
+  <ul>
+  <li>cxx mwg param paths: [bugfix] 使用するコンパイラの設定を読み込まずに表示していたのを修正。</li>
+  </ul>
+</li>
+<li>2013-02-10, KM, mcxx-2.0.5
+  <ul>
+  <li>cxx-cl.sh: iconv にオプション -c を指定 (変換できない文字は破棄)</li>
+  <li>cxx: cxx mwg param paths を追加</li>
+  <li>readme.htm: スタイルシート及びスクリプトの指定に誤りがあったので修正。</li>
+  </ul>
+</li>
+<li>2012-11-06, KM, mcxx-2.0.4
+  <ul>
+  <li>gccflags.src: --enable-auto-import を windows だけで有効に
+    <p>-Wl,--enable-auto-import は windows 以外では不要な様だ。</p>
+  </li>
+  <li>gccflags.src: コンパイラ名を引数に取る様に変更。
+    <p>各コンパイラでの共通設定を書く為。</p>
+  </li>
+  </ul>
+</li>
+<li>2012-10-25, KM, mcxx-2.0.3
+  <ul>
+  <li>[mwg traits] コードの整理。H X M S 等の類似のテスト項目についてのコードが類似しているので、整理。</li>
+  <li>[mwg traits] 高速化。
+    <p>キャッシュがある場合でも、ソースコードを生成してパイプで渡していた為に、
+      fork が発生し cygwin 環境で遅くなっていた。
+      ソースコードはキャッシュがない時にだけ生成する様にした。
+      また、引数が沢山になってきたので、
+      共通関数に渡すパラメータはコマンドライン引数としてではなく、
+      特定のシェル変数 param_* に設定しておく事によって渡す事にした。
+    </p>
+  </li>
+  </ul>
+</li>
+<li>2012-10-20, KM, mcxx-2.0.2
+  <ul>
+  <li>[mwg traits] マクロの存在テスト M を追加</li>
+  <li>mwg traits のキャッシュ名決定を bash 関数で実装
+    <p>cygwin 上での動作速度を向上させる為、
+    base64 encode を bash の function だけで実装。
+    </p>
+  </li>
+  <li>[mwg version] バージョン確認テストを追加</li>
+  <li>[mwg traits, bugfix] bash-4.1 以下で mwg.uppercase.set が正しく動作しないのを修正。
+    <p>"$*" とするべき所が "*" となっていた。</p>
+  </li>
+  </ul>
+</li>
+<li>2012-10-15, KM, mcxx-2.0.1
+  <ul>
+  <li>[cxx mwg traits] X 及び D を追加。
+    <p>X は与えられた式がコンパイル可能かテストする。
+    D は与えられた引数のマクロを定義する。
+    </p>
+  </li>
+  <li>cxx mwg traits input output
+    <p>出力先を明示的に指定可能に。</p>
+  </li>
+  <li>cxx mwg traits input の出力先を input から自動的に類推。</li>
+  <li>cxxprefix の自動推測で今迄 config.guess を同梱していたが、
+    これから独立して自動推測できる様に修正。
+  </li>
+  </ul>
+</li>
+<li>2012-09-22, KM, mcxx-2.0.0
+  <ul>
+  <li>移植性。初期自動設定機能の拡充。</li>
+  <li>cxx_help.sh
+    <p>ヘルプの表示機能</p>
+  </li>
+  <li>cxx_pref-add_msc16-config.src</li>
+  <li>cxx_pref-add_msc16-config.src
+    <p>Microsoft C/C++ Compiler (VC) の自動登録</p>
+  </li>
+  </ul>
+</li>
+<li>2012-05-23, KM
+  <ul>
+  <li>mcxx</li>
+  <li>mcxx/cxx_pref</li>
+  <li>mcxx/m
+    <p>設定項目を cxx 本体を弄らずに変更できる様に大幅に整理。mcxx とする。
+    登録されているコンパイラは cxx_pref に、
+    各コンパイラの設定項目は m ディレクトリに配置。
+    </p>
+  </li>
+  </ul>
+</li>
+<li>2011-09-19, KM
+  <ul>
+  <li>cxx-cl.sh</li>
+  <li>cxxar</li>
+  <li>cxxar-vc.sh
+    <p>更に、vc についても gcc と同じ
+    コマンドラインインターフェイスで利用できる様にラッパを書く。
+    ライブラリの生成についても同様。
+    </p>
+  </li>
+  </ul>
+</li>
+<li>2011-08-28, KM
+  <ul>
+  <li>cxx
+    <p>Makefile 等でコンパイラ毎にコマンドを切り替えるのが大変なので、
+    コマンド名を cxx に統一して、環境変数を用いてコンパイラを切り替える様に変更。
+    </p>
+  </li>
+  </ul>
+</li>
+<li>2011-07-08, KM
+  <ul>
+  <li>setup-4.5.2-tdm64.sh
+    <p>追加</p>
+  </li>
+  </ul>
+</li>
+<li>2011-06-05, KM
+  <ul>
+  <li>$HOME/env
+    <p>環境設定に関連するスクリプトをこの中に統合してみた。
+    更に、各環境毎のパスの設定が面倒なので、
+    この中に設定毎に使うコマンドの symbolic link を集めた。
+    が、非 cygwin バイナリを symbolic link で呼び出すと不都合が生じるという事が分かって、
+    結局使われなくなった。
+    </p>
+  </li>
+  </ul>
+</li>
+<li>2011-04-08, KM
+  <ul>
+  <li>g++m44</li>
+  <li>g++m45</li>
+  <li>g++c43</li>
+  <li>g++c34</li>
+  <li>g++.cyg
+    <p>利便性の為に短い名前でも呼べる様にする。</p>
+  </li>
+  </ul>
+</li>
+<li>2011-01-06, KM
+  <ul>
+  <li>g++.mingw4.4.1</li>
+  <li>g++.mingw4.5.0</li>
+  <li>g++.cygwin4.3.4</li>
+  <li>g++.cygwin3.4.4
+    <p>事前に設定ファイルを source しなくても、
+    単体のコマンドとして各コンパイラを使える様にスクリプトを書く。
+    </p>
+  </li>
+  </ul>
+</li>
+<li>2010-10-18, KM
+  <ul>
+  <li>$HOME/bin/cyggcc3</li>
+  <li>$HOME/bin/cyggcc4
+    <p>使用するコンパイラ毎に設定用のディレクトリを作成してみる。
+    今の m/$CXXPREFIX/ ディレクトリと同じ発想だが、結局使用せず。
+    </p>
+  </li>
+  </ul>
+</li>
+<li>2010-09-23, KM
+  <ul>
+  <li>setup-libs.sh
+    <p>複数のコンパイラで共通のライブラリ設定を分離。</p>
+  </li>
+  </ul>
+</li>
+<li>2010-07-21, KM
+  <ul>
+  <li>setup-vs10.sh</li>
+  <li>setup-vs9.sh
+    <p>複数の VC コンパイラの為の設定。</p>
+  </li>
+  </ul>
+</li>
+<li>2010-05-04, KM
+  <ul>
+  <li>setup-tdm4.4.1.sh</li>
+  <li>setup-msys1.0.sh</li>
+  <li>setup-mingw4.5.0.sh</li>
+  <li>setup-latex.sh
+    <p>複数の MinGW コンパイラを入れたのを機に作成。
+    他のコンパイラを利用する為の設定ファイルを作成。
+    source setup-tdm4.4.1.sh 等として使う事を想定。
+    その他、それぞれ独立な設定を必要とする物についてファイルを作成。
+    </p>
+  </li>
+  </ul>
+</li>
+</ul>
+
+</body>
+</html>

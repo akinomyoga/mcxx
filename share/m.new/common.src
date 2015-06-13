@@ -1,0 +1,87 @@
+# -*- mode:sh -*-
+
+#------------------------------------------------------------------------------
+# gccflags.src
+
+is_windows() { test -n "$SYSTEMROOT" -a -n "$PROGRAMFILES"; }
+
+case "$1" in
+(gcc|mingw|*)
+  # gcc のとき文字コードを指定 (icpc clang 除く)
+  local rex='/([^/]*-)?g\+\+[^/]*$'
+  if [[ $CXX_ENCODING && $CXX =~ $rex ]]; then
+    FLAGS="$FLAGS -finput-charset=$CXX_ENCODING -fexec-charset=$CXX_ENCODING"
+  fi
+
+  if is_windows; then
+    FLAGS="$FLAGS -Wl,--enable-auto-import"
+  fi ;;
+esac
+
+#------------------------------------------------------------------------------
+# loadlib.src
+
+CPPLIBS=/unix/cpplibs
+CPPLIBS_WIN='C:/unix/cpplibs'
+
+if test "x$1" == xgcc; then
+  addlib () {
+    local inc="$1"
+    local lib="$2"
+    test -n "$lib" && export LIBRARY_PATH="${LIBRARY_PATH}${LIBRARY_PATH:+:}$lib"
+    test -n "$inc" && export CPLUS_INCLUDE_PATH="${CPLUS_INCLUDE_PATH}${CPLUS_INCLUDE_PATH:+:}$inc"
+  }
+
+  local cpplibs="$CPPLIBS"
+
+  #----------------------------------------------------------------------------
+  # -- Add additional library paths here --
+
+  # addlib "/usr/include/freetype2"
+  # addlib "$cpplibs/mwg/include" "$cpplibs/mwg/include"
+  # addlib "$cpplibs/mwg/include/$CXXPREFIX" "$cpplibs/mwg/lib/$CXXPREFIX"
+  #----------------------------------------------------------------------------
+elif test "x$1" == xmingw; then
+  addlib () {
+    local inc="$1"
+    local lib="$2"
+    test -n "$lib" && export LIBRARY_PATH="${LIBRARY_PATH}${LIBRARY_PATH:+;}$lib"
+    test -n "$inc" && export CPLUS_INCLUDE_PATH="${CPLUS_INCLUDE_PATH}${CPLUS_INCLUDE_PATH:+;}$inc"
+  }
+
+  local cpplibs="$CPPLIBS_WIN"
+
+  #----------------------------------------------------------------------------
+  # -- Add additional library paths here --
+
+  # addlib "$cpplibs/mwg/include" "$cpplibs/mwg/include"
+  # addlib "$cpplibs/mwg/include/$CXXPREFIX" "$cpplibs/mwg/lib/$CXXPREFIX"
+  #----------------------------------------------------------------------------
+elif test "x$1" == xvc; then
+  LIB=${LIB%;}
+  LIBPATH=${LIBPATH%;}
+  INCLUDE=${INCLUDE%;}
+
+  addlib () {
+    local inc="$1"
+    local lib="$2"
+    test -n "$lib" && export LIB="${LIB}${LIB:+;}$lib"
+    test -n "$lib" && export LIBPATH="${LIBPATH}${LIBPATH:+;}$lib"
+    test -n "$inc" && export INCLUDE="${INCLUDE}${INCLUDE:+;}$inc"
+  }
+
+  local cpplibs="$CPPLIBS_WIN"
+
+  #----------------------------------------------------------------------------
+  # -- Add additional library paths here --
+
+  # addlib "$cpplibs/mwg/include" "$cpplibs/mwg/include"
+  # addlib "$cpplibs/mwg/include/$CXXPREFIX" "$cpplibs/mwg/lib/$CXXPREFIX"
+  # addlib "$cpplibs/clapack3.1.1/include" "$cpplibs/clapack3.1.1/lib"
+  # addlib "$cpplibs/WTL80/include"
+  # addlib "$cpplibs/GSL1.10/include" "$cpplibs/GSL1.10/lib"
+  # addlib "$cpplibs/Boost1.42.0/include" "$cpplibs/Boost1.42.0/lib"
+  #----------------------------------------------------------------------------
+else
+  echo "unknown compiler type '$1'!" >&2
+fi

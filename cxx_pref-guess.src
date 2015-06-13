@@ -1,0 +1,88 @@
+#!/bin/bash
+# -*- mode:sh -*-
+
+#------------------------------------------------------------------------------
+# tools: compiler triplets (config.guess like function)
+
+vstring.gt () {
+  local file1="$1"
+  local file2="$2"
+  test "$file1" == "$file2" && return 1
+
+  local part1="${file1%%[0-9]*}"
+  local part2="${file2%%[0-9]*}"
+  if test "$part1" == "$part2"; then
+    file1="${file1:${#part1}}"
+    file2="${file2:${#part2}}"
+    part1="${file1%%[^0-9]*}"
+    part2="${file2%%[^0-9]*}"
+    if test "$part1" == "$part2"; then
+      file1="${file1:${#part1}}"
+      file2="${file2:${#part2}}"
+      vstring.gt "$file1" "$file2"
+    else
+      test "${part1:-0}" -gt "${part2:-0}"
+    fi
+  else
+    test "$part1" '>' "$part2"
+  fi
+}
+vstring.lt () { vstring.lt "$2" "$1"; }
+vstring.ge () { test "$1" == "$2" || vstring.gt "$1" "$2"; }
+vstring.le () { test "$1" == "$2" || vstring.gt "$2" "$1"; }
+
+fsys.last_mtime () {
+  local ret="$1"
+  shift
+  while test $# -gt 0; do
+    test "$1" -nt "$ret" && ret="$1"
+    shift
+  done
+  echo "$ret"
+}
+fsys.last_version () {
+  local ret="$1"
+  shift
+  while test $# -gt 0; do
+    vstring.gt "$1" "$ret" && ret="$1"
+    shift
+  done
+  echo "$ret"
+}
+
+cxx_pref.guess () {
+  local cmd="$(fsys.last_version /usr/share/automake*/config.guess)"
+  if test -f "$cmd"; then
+    "$cmd"
+  else
+    local uname_m; uname_m=$(uname -m 2>/dev/null) || uname_m=unknown
+    local uname_s; uname_s=$(uname -s 2>/dev/null) || uname_s=unknown
+    local uname_r; uname_r=$(uname -r 2>/dev/null) || uname_r=unknown
+    local uname_v; uname_v=$(uname -v 2>/dev/null) || uname_v=unknown
+    case "$uname_m:$uname_s:$uname_r:$uname_v" in
+    *:CYGWIN*:*:*)
+        echo "$uname_m-pc-cygwin"
+        ;;
+    *:Linux:*:*)
+        echo "$uname_m-linux-gnu"
+        ;;
+    *:AIX:*:*)
+	      if test -x /usr/bin/oslevel ; then
+	        echo "$uname_m-ibm-aix"`/usr/bin/oslevel`
+	      else
+	        echo "$uname_m-ibm-aix$uname_v.$uname_r"
+	      fi
+        ;;
+    *)
+        uname_s="$(echo -n "$uname_s"|tr '[A-Z]' '[a-z]')"
+        local head="${uname_s%%[A-Za-z0-9]*}"
+        uname_s="${uname_s:${#head}}"
+        uname_s="${uname_s%%[^A-za-z0-9]*}"
+        echo "$uname_m-unknown-${uname_s:-unknown}"
+        ;;
+    esac
+  fi
+}
+
+cxx_pref.guess
+#------------------------------------------------------------------------------
