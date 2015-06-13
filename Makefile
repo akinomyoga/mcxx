@@ -9,7 +9,8 @@ exclude_options= \
 	--exclude=./mcxx/tmp.obj \
 	--exclude=./mcxx/backup \
 	--exclude=./mcxx/mat \
-	--exclude=./mcxx/test_cxx
+	--exclude=./mcxx/test_cxx \
+	--exclude=./mcxx/.git
 
 # 各ディレクトリの説明
 #   ./mcxx/mat        開発資料

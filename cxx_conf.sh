@@ -472,6 +472,8 @@ comp_test_cached() {
 test_header.code() {
   echo "#include <$header>"
 }
+
+## @var[in] title
 test_header_cached () {
   local header="$1"
 
@@ -479,21 +481,49 @@ test_header_cached () {
   local name="${header//$SL/%}"
   local param_cachename="H+$name"
   local param_log_title="test_header $header"
-  local param_msg_title="test_header $t_sgr35#include <$header>$t_sgr0"
+  local param_msg_title="(H) $t_sgr35${title:-#include <$header>}$t_sgr0"
   local param_cmd_code=test_header.code
   local m_ng="$msg_missing"
   comp_test_cached
 }
 
 function H {
-  local header="$1"
-  local name="$2"
-  test -n "$name" || mwg.uppercase.set name "MWGCONF_HEADER_${header//[^0-9a-zA-Z]/_}"
+  # read arguments
+  local header= dname= title=
+  while (($#)); do
+    local arg="$1"
+    shift
+    case "$arg" in
+    (-o?*) dname="${arg:2}"   ;;
+    (-o)   dname="$1"; shift  ;;
+    (-t?*) title="${arg:2}"  ;;
+    (-t)   title="$1"; shift ;;
+    (*)
+      if [[ ! $header ]]; then
+        header="$arg"
+      elif [[ ! $dname ]]; then
+        dname="$arg"
+      else
+        echoe "H: ignored argument '$arg'."
+      fi ;;
+    esac
+  done
+
+  if [[ ! $header ]]; then
+    echoe 'H: no header is specified.'
+    return 1
+  fi
+
+  if [[ $dname ]]; then
+    dname="${dname//[^0-9a-zA-Z/_]}"
+  else
+    mwg.uppercase.set dname "MWGCONF_HEADER_${header//[^0-9a-zA-Z]/_}"
+  fi
 
   local r=''
   test_header_cached "$header" && r=1
-  fdout.define "$name" "$r"
-  eval "$name=$r"
+  fdout.define "$dname" "$r"
+  eval "$dname=$r"
   test -n "$r"
 }
 
@@ -523,7 +553,7 @@ test_macro_cached () {
   local enc_head; mwg.base64.set enc_head $headers
   local param_cachename="M-$enc_head-$macro"
   local param_log_title="test_macro $macro"
-  local param_msg_title="test_macro $t_sgr35#define $macro$t_sgr0"
+  local param_msg_title="(M) $t_sgr35#define $macro$t_sgr0"
   local param_cmd_code=test_macro.code
   local m_ng="$msg_missing"
   comp_test_cached
@@ -545,40 +575,76 @@ function M {
 # expr
 
 test_expression.code() {
-  for h in $headers; do
+  local h
+  for h in "${headers[@]}"; do
     echo "#include <$h>"
   done
   echo "void f(){$expression;}"
 }
 
+## @var[in] title
+## @var[in] headers=(...)
+## @var[in] expression
 test_expression_cached () {
-  local name="$1"
-  local headers="$2"
-  local expression="$3"
-
   local enc_head enc_expr
-  mcxx.hash -venc_head -l64 "$headers"
+  mcxx.hash -venc_head -l64 "${headers[*]}"
   mcxx.hash -venc_expr -l64 "$expression"
 
   local param_cachename="X-$enc_head-$enc_expr"
   local param_log_title="test_expression $header $expression"
-  local param_msg_title="test_expr $t_sgr35$name$t_sgr0"
+  local param_msg_title="(X) $t_sgr35$title$t_sgr0"
   local param_cmd_code=test_expression.code
   comp_test_cached
 }
 
 function X {
-  local name="$1"
-  local def_name; mwg.uppercase.set def_name "${1//[^0-9a-zA-Z]/_}"
-  [[ "$def_name" =~ ^MWGCONF_ ]] || def_name="MWGCONF_HAS_$def_name"
-  local headers="$2"
-  local expression="$3"
+  # read arguments
+  local dname= expression= title=
+  local fAbsoluteName= fSetName= fSetHeader=
+  local -a headers
+  headers=()
+  while (($#)); do
+    local arg="$1"
+    shift
+    case "$arg" in
+    (-o?*) fAbsoluteName=1 fSetName=1 dname="${arg:2}"   ;;
+    (-o)   fAbsoluteName=1 fSetName=1 dname="$1"; shift  ;;
+    (-t?*) title="${arg:2}"  ;;
+    (-t)   title="$1"; shift ;;
+    (-h?*) fSetHeader=1 headers+=("${arg:2}")  ;;
+    (-h*)  fSetHeader=1 headers+=("$1"); shift ;;
+    (*)
+      if [[ ! $fSetName ]]; then
+        fSetName=1 dname="$arg"
+      elif [[ ! $fSetHeader ]]; then
+        fSetHeader=1 headers+=($arg)
+      elif [[ ! $expression ]]; then
+        expression="$arg"
+      else
+        echoe "X: ignored argument '$arg'."
+      fi ;;
+    esac
+  done
 
-  local r=''
-  test_expression_cached "$@" && r=1
-  if test ${#name} -gt 0; then
-    fdout.define "$def_name" "$r"
-    eval "$def_name=$r"
+  : "${title:="${dname:-"$expression"}"}"
+
+  if [[ ! $fAbsoluteName ]]; then
+    mwg.uppercase.set dname "${dname//[^0-9a-zA-Z]/_}"
+    [[ "$dname" =~ ^MWGCONF_ ]] || dname="MWGCONF_HAS_$dname"
+  else
+    dname="${dname//[^0-9a-zA-Z]/_}"
+  fi
+
+  if [[ ! $expression ]]; then
+    echoe 'X: expression is not specified!'
+    return 1
+  fi
+
+  local r=
+  test_expression_cached && r=1
+  if [[ $dname ]]; then
+    fdout.define "$dname" "$r"
+    eval "$dname=$r"
   fi
   test -n "$r"
 }
@@ -587,39 +653,76 @@ function X {
 # source
 
 test_source.code() {
-  for h in $headers; do
+  local h
+  for h in "${headers[@]}"; do
     echo "#include <$h>"
   done
   echo "$source"
 }
 
+## @var[in] title
+## @var[in] headers=(...)
+## @var[in] source
 test_source_cached() {
-  local name="$1"
-  local headers="$2"
-  local source="$3"
-
   local enc_head enc_expr
-  mcxx.hash -venc_head -l64 "$headers"
+  mcxx.hash -venc_head -l64 "${headers[*]}"
   mcxx.hash -venc_expr -l64 "$source"
 
   local param_cachename="S-$enc_head-$enc_expr"
   local param_log_title="test_source $headers $source"
-  local param_msg_title="test_source $t_sgr35$name$t_sgr0"
+  local param_msg_title="(S) $t_sgr35${title}$t_sgr0"
   local param_cmd_code=test_source.code
   comp_test_cached
 }
 
 function S {
-  local name="$1"
-  local def_name; mwg.uppercase.set def_name "MWGCONF_${1//[^0-9a-zA-Z]/_}"
-  local headers="$2"
-  local source="$3"
+  # read arguments
+  local dname= source= title=
+  local fAbsoluteName= fSetName= fSetHeader=
+  local -a headers
+  headers=()
+  while (($#)); do
+    local arg="$1"
+    shift
+    case "$arg" in
+    (-o?*) fAbsoluteName=1 fSetName=1 dname="${arg:2}"   ;;
+    (-o)   fAbsoluteName=1 fSetName=1 dname="$1"; shift  ;;
+    (-t?*) title="${arg:2}"  ;;
+    (-t)   title="$1"; shift ;;
+    (-h?*) fSetHeader=1 headers+=("${arg:2}")  ;;
+    (-h*)  fSetHeader=1 headers+=("$1"); shift ;;
+    (*)
+      if [[ ! $fSetName ]]; then
+        fSetName=1 dname="$arg"
+      elif [[ ! $fSetHeader ]]; then
+        fSetHeader=1 headers+=($arg)
+      elif [[ ! $source ]]; then
+        source="$arg"
+      else
+        echoe "X: ignored argument '$arg'."
+      fi ;;
+    esac
+  done
+
+  : "${title:="${dname:-"$source"}"}"
+
+  if [[ ! $fAbsoluteName ]]; then
+    mwg.uppercase.set dname "${dname//[^0-9a-zA-Z]/_}"
+    [[ "$dname" =~ ^MWGCONF_ ]] || dname="MWGCONF_$dname"
+  else
+    dname="${dname//[^0-9a-zA-Z]/_}"
+  fi
+
+  if [[ ! $source ]]; then
+    echoe 'X: source is not specified!'
+    return 1
+  fi
 
   local r=''
-  test_source_cached "$@" && r=1
-  if test ${#name} -gt 0; then
-    fdout.define "$def_name" "$r"
-    eval "$def_name=$r"
+  test_source_cached && r=1
+  if [[ $dname ]]; then
+    fdout.define "$dname" "$r"
+    eval "$dname=$r"
   fi
   test -n "$r"
 }
