@@ -53,8 +53,12 @@ declare arg_dep_target
 arg_dep_output.set () {
   test -n "$1" && arg_dep_output="$1"
 }
-arg_dep_target.set () {
+arg_dep_target.push () {
   test -n "$1" && arg_dep_target="$arg_dep_target${arg_dep_target:+ }$1"
+}
+function arg_dep_target.push-quoted {
+  local src='$' dst='$$'
+  arg_dep_target.push "${1//$src/$dst}"
 }
 
 search_object_file () {
@@ -143,8 +147,10 @@ while test $# -gt 0; do
   -MF)  shift; arg_dep_output.set "$1"     ;;
   -MF*)        arg_dep_output.set "${1:3}" ;;
   -MP)  fMP=1 ;;
-  -MT)  shift; arg_dep_target.set "$1" ;;
-  -MT*)        arg_dep_target.set "${1:3}" ;;
+  -MT)  shift; arg_dep_target.push "$1" ;;
+  -MT*)        arg_dep_target.push "${1:3}" ;;
+  -MQ)  shift; arg_dep_target.push-quoted "$1" ;;
+  -MQ*)        arg_dep_target.push-quoted "${1:3}" ;;
   #----------------------------------------------------------------------------
   -)
     # from standard input
