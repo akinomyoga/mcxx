@@ -79,13 +79,13 @@ if test -n "$mcxx_arg"; then
   (xget|xparam) # xparam obsoleted
     source "$CXXDIR/cxx_pref-get.sh"
     case "$1" in
-    cxxdir)
+    (cxxdir)
       echo "$CXXDIR"
       exit ;;
-    env-source)
+    (env-source)
       echo "$CXXDIR2/config.src"
       exit ;;
-    input-charset)
+    (input-charset)
       if test -f "$CXXDIR2/input-charset.txt"; then
         cat "$CXXDIR2/input-charset.txt"
       elif test -n "$SYSTEMROOT" -a -n "$PROGRAMFILES" -a -n "${CXXPREFIX/*-cygwin-*/}"; then
@@ -95,8 +95,7 @@ if test -n "$mcxx_arg"; then
         echo -n utf-8
       fi
       exit ;;
-    paths)
-      source_if "$CXXDIR/local/m/common.src"
+    (paths)
       source "$CXXDIR2/config.src" cxx
 
       echo "PATH='$PATH'"
@@ -107,7 +106,7 @@ if test -n "$mcxx_arg"; then
       test -n "$LIB" && echo "LIB='$LIB'"
       test -n "$LIBPATH" && echo "LIBPATH='$LIBPATH'"
       exit 0 ;;
-    *)
+    (*)
       echo "unknown parameter name '$1'" >&2
       exit 1 ;;
     esac ;;
