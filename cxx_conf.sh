@@ -628,7 +628,9 @@ function X {
 
   : "${title:="${dname:-"$expression"}"}"
 
-  if [[ ! $fAbsoluteName ]]; then
+  if [[ ! $dname || $dname == - ]]; then
+    dname=
+  elif [[ ! $fAbsoluteName ]]; then
     mwg.uppercase.set dname "${dname//[^0-9a-zA-Z]/_}"
     [[ "$dname" =~ ^MWGCONF_ ]] || dname="MWGCONF_HAS_$dname"
   else

@@ -130,10 +130,10 @@ while test $# -gt 0; do
   -O3)    add_arg "-Ox" ;;
   -Os)    add_arg "-Os" ;;
   -fast)
-      add_arg "-Ox"
-      add_arg "-GL"
-      add_arg "-arch:SSE2"
-      ;;
+    add_arg "-Ox"
+    add_arg "-GL"
+    add_arg "-arch:SSE2"
+    ;;
   -fomit-frame-pointer)
     add_arg "-Oy" ;;
   -fno-omit-frame-pointer)

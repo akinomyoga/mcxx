@@ -31,8 +31,8 @@ export CXXDIR
 
 #------------------------------------------------------------------------------
 
-mcxx_version=20110
-mcxx_version_string="mcxx-2.1.10"
+mcxx_version=20111
+mcxx_version_string="mcxx-2.1.11"
 
 # read +argument
 mcxx_arg=
