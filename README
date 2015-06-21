@@ -1,0 +1,419 @@
+Manual Page of mcxx - myoga c++ compiler handler
+
+Manual
+
+Name
+
+mcxx - myoga c++ compiler handler
+
+複数の C/C++ コンパイラを単一のインターフェイスで利用する為のコマンドです。各コ
+ンパイラを識別する為の文字列として key (CXXKEY) 及び prefix (CXXPREFIX) を使用
+します。 prefix は例えば "i686-cygwin-gcc-4.7.3" の様な物で、コンパイラ依存のヘ
+ッダ・ライブラリは prefix と同名のサブディレクトリ以下に配置されます。 key はコ
+ンパイラを簡易に指定する為の短い名前で、例えば "c" 等の様な物になります。環境変
+数 CXXKEY に key を指定する事で、使用するコンパイラを切り替える事ができます。
+
+Install
+
+mcxx.tar.xz を展開して中で make install を実行して下さい。 MWGDIR=$HOME/.mwg 以
+下にインストールされます。インストールの過程で $MWGDIR/bin 及び $MWGDIR/mcxx に
+ファイルがコピーされ自動設定が行われます。インストール先を変更する場合は MWGDIR
+環境変数を設定して make install を実行して下さい。
+
+Usage
+
+cxx [options] files
+cxx +operations [args]
+
+operations
+
+  • cxx +version
+
+    shows the version of mcxx.
+
+  • cxx +version require [2.0.2 or later]
+
+    tests version is greater or equals to the specified version require. The
+    format of require is the same as the result of printf "%d%02d%02d" major
+    minor patch.
+
+  • cxx +help
+
+    shows simple help texts.
+
+  • cxx +prefix
+  • cxx +prefix get
+
+    shows cxxprefix for current environment.
+
+  • cxx +prefix list
+
+    show the list of cxxkeys and cxxprefices.
+
+  • CXX=c++-compiler CC=c-compiler cxx +prefix add
+
+    usage:
+
+    export CC=c-compiler
+    export CXX=c++-compiler
+    cxx +prefix add
+
+    interactively registers a CXXKEY and CXXPREFIX pair for the specified
+    compilers.
+
+  • cxx +prefix auto
+
+    automatically detects compilers, and interactively registers them.
+
+  • cxx +prefix remove key/prefix [2.11 or later]
+  • cxx +prefix set-default key/prefix [2.11 or later]
+  • cxx +prefix set-key oldkey/prefix newkey [2.12 or later]
+  • cxx +config listfile
+
+    create cxx_conf.h from listfile. Each line in a listfile corresponds to an
+    item to check. A line in a listfile takes one of the following forms:
+
+     1. P line
+
+        指定した行を直接出力します。
+
+     2. D MACRO_NAME [macro_value]
+
+        指定したマクロの定義を出力します。
+
+     3. H foobar.h [MWGCONF_HEADER_FOOBAR_H]
+
+        指定したヘッダファイル foobar.h が存在するかチェックし、存在する場合に
+        マクロ MWGCONF_HEADER_FOOBAR_H の定義を出力します。
+        MWGCONF_HEADER_FOOBAR_H の指定を省略した場合、マクロ名は
+        "MWGCONF_HEADER_(foobar.h のアルファベットを英大文字にし記号を _ で置き
+        換えた文字列)" になります。
+
+        foobar.h : an include file to check its existence
+
+        MWGCONF_HEADER_FOOBAR_H : the macro defined when foobar.h exists.
+        default is "MWGCONF_HEADER_${foobar.h:changing to uppercase and
+        replacing symbols with underscore}"
+
+     4. X name headers expression
+
+        headers: headers to include, connected with spaces in a single
+        argument.
+
+        MWGCONF_HAS_NAME: the macro defined when source is compiled.
+
+     5. S name headers source
+
+        MWGCONF_NAME: the macro defined when source is compiled.
+
+     6. M name headers macro
+
+        MWGCONF_NAME: the macro defined when macro is defined.
+
+  • cxx +config clean
+  • cxx +get cxxdir
+  • cxx +get env-source
+  • cxx +get input-charset
+
+mcxx - Development
+
+ToDo
+
+  • 2013-10-26
+      □ cxx +traits, cxx +param の完全廃止。
+      □ cxx_make.sh: 各種 make 機能。OUTDIR 対応。compile, link, install,
+  • 2013-10-24
+      □ gcc, mingw に関するインストール・実行などのスクリプトを独立させる (現在
+        の cl の様に)。
+      □ ディレクトリの再配置案
+          ☆ share/adapter: コンパイラ依存のスクリプトなど (add_msc.sh,
+            cxxar-vc.sh, cxx-cl.sh など)
+          ☆ share/tests: cxx_conf.sh の既定のテストソースコード
+          ☆ share/m.new: 現在の m.tmpl [完]
+          ☆ local/prefix: 現在の cxx_pref [完]
+          ☆ local/m: 現在の m [完]
+          ☆ local/include: コンパイラ毎の既定インストール先
+          ☆ local/lib: コンパイラ毎の既定インストール先
+  • 2013-03-08 以前
+      □ バージョンアップ機能。自動的に昔の設定を引き継ぐ
+          ☆ 単に上書きをすれば version up になる。単なる上書きでは済まない場合
+            は、自動的に m の中身を更新するスクリプトを書く。 (従って、update
+            用のスクリプトを呼び出す様にしておく必要はある)。
+          ☆ 配布 url を固定する。
+      □ prefix:
+          ☆ icc では gcclibs.src を source しない (または、icc で source する)
+            。
+          ☆ icc で -gcc-name 及び -gxx-name を自動で追加する?
+          ☆ cxx +prefix add: その時の CXXKEY, CXXPREFIX, FLAGS, CFLAGS,
+            CXXFLAGS, INCLUDE_PATH, C_INCLUDE_PATH, CPLUS_INCLUDE_PATH,
+            LIBRARY_PATH を取り込む様にする。
+
+M1. Miscellaneous
+
+M1.1 インストール用のスクリプトに関し @2013-10-24
+
+インストール用のスクリプト @2013-03-08 以前
+
+  • 既存のディレクトリへのコピー
+  • パスの通っている場所への symbolic link
+  • [DEL:echox を中に取り込む事:DEL] 完
+  • デフォルトの CXXKEY を決定して、cxx_pref/key+default.stamp に書き込む事
+
+インストール用のスクリプト install.sh を作成し、 make install でこれを実行する
+様に設定する。既定で $HOME/.mwg/mcxx 以下にファイルをコピーする (但し、既に其処
+にコピーされている場合にはコピーを省略する)。次に、$HOME/.mwg/bin 以下にシンボ
+リックリンクを貼り、 $HOME/.mwg/bin にパスを通せばコマンドを使える様にする。ま
+た、自動構成 cxx +prefix auto を走らせて、コンパイラの情報を登録する。
+
+ChangeLog
+
+  • 2015-06-21, KM, mcxx-2.1.11
+      □ cxx +config: H, X, S options
+          ☆ cxx +config (X): `-' または '' を define name として指定した場合、
+            テストだけを行い実際の #define は出力しない。
+          ☆ cxx +config: オプション `--' を以て、以降の引数がコンパイラに渡すオ
+            プションであることを指定する。
+      □ share/adapter/msc/cxx: option `-MQ'
+      □ cxx +prefix auto: すでに登録されたコンパイラはスキップする機能
+      □ cxx +prefix: bugfix, MSC コンパイラ識別 (bash-3 と bash-4 の正規表現の
+        取り扱いの違いに起因)
+  • 2015-04-27, KM, mcxx-2.1.10
+      □ cxx_conf.sh: より複雑な引数に対応。
+  • 2014-07-13, KM, mcxx-2.1.9
+      □ cxx_conf.sh: MWGCONF_HAVE_ を MWGCONF_HAS_ に変更 (やはり述語は三単現に
+        するのが一般的である)
+  • 2014-06-25, KM, mcxx-2.1.8
+      □ cxx_conf.sh: bugfix, 複雑なテストでファイル名の長さ制限に引っかかる →適
+        当な長さで折り返して加算してから base64 符号化する様に変更。
+      □ cxx_conf.sh(mwg_base64_table): '/' を '%' に変更。'/' はディレクトリ名
+        の区切の為、ファイル名には使用できない。
+  • 2013-11-03, KM, mcxx-2.1.7
+      □ cxx_pref.sh, share/adapter/mingw, share/adapter/gcc: mingw, gcc に関す
+        る部分を分離・独立。
+      □ cxx_pref.sh, adapter/gcc, adapter/msc: detect-compilers 実装。
+      □ cxx: bugfix, CXXDIR 判定に失敗していた。$0 を使うべき所 $1 を使っていた
+        。
+      □ adapter/msc/prefix.sh(msc.detect-compilers): Win7 では Program Files
+        (x86) と Program Files の両方があるのに対応 (実際はどちらか一方だと思わ
+        れるが)。
+  • 2013-10-30, KM, mcxx-2.1.6
+      □ ext/mydoc1.sh: 適当な書式言語を作って mydoc1 として独立して作成、それを
+        ext に取り込む事にした。
+      □ cxx_pref.sh(cxx +prefix help): 追加。ext/mydco1.sh を使って表示する。
+      □ install.sh: bugfix, mkdir -p $MWGDIR/mcxx を実行していなかった
+      □ cxx_pref.sh(cxx +prefix set-key): bugfix, default でない場合に exit
+        code 1 で終了していた
+      □ bug: +prefix set-default で既定のコンパイラを変更しても +prefix list に
+        反映されない。
+  • 2013-10-27, KM, mcxx-2.1.5
+      □ cxx_make.sh(cxx +make c): 対応。但し、何をしたかったのか分からなくなっ
+        た
+      □ adapter/msc/cxx.sh: bugfix, SUNPRO_DEPENDENCIES_OUTPUT を指定しても
+        DEPENDENCIES_OUTPUT に出力される。
+  • 2013-10-26, KM, mcxx-2.1.4
+      □ cxx_conf.sh(cxx +traits): 出力ファイル名の自動決定時、拡張子 .sh を除く
+        様に変更。
+      □ cxx_conf.sh(cxx +config): cxx +traits から cxx +config に変更。
+      □ cxx_conf.sh(cxx +config): 既定の入力ファイル名を config.sh に変更。
+      □ cxx_pref.sh(cxx +prefix auto): bugfix, 登録しなかった時に set-default
+        をしようとしてエラーになる→見付からなかった時の判定
+      □ cxx_pref.sh(cxx +prefix auto): bugfix, 自動で提案される prefix が既に使
+        用されている→.stamp ファイル名の指定を誤っていた
+      □ share/adapter/msc: vc(cl) 関連のスクリプト cxx-cl.sh cxxar-vc.sh
+        cxx_pref-add_msc* を share/adapter 以下に移動する。
+      □ share/adapter/mingw: cxxar-mingw.sh を移動。
+  • 2013-10-24, KM, mcxx-2.1.3
+      □ install.sh: 自動インストールのスクリプトを記述。
+      □ usage: cxx +param を cxx +get に変更
+      □ cxx_conf.sh:P: 行を直接出力するコマンドを定義 (今迄は fdout.print を呼
+        び出していた)
+      □ cxx_conf.sh: bugfix, 例えば cxx +traits bash などとすると /usr/bin/bash
+        を source しようとする。先頭に ./ を付加して呼び出す様に変更。
+      □ mcxx/cxx_pref: mcxx/local/prefix に移動
+      □ mcxx/m_pref: mcxx/local/m に移動
+      □ mcxx/m.tmp: mcxx/share/m.new に移動
+      □ local/m/gccflags.src, local/m/loadlib.src を統合して一つ (local/m/
+        common.src) にする。
+      □ local/m/common.src: 元々 cxx から読み込んでいたが、今迄の loadlib.src
+        等の様に m/*/config.src を介して読み込む様に変更。
+      □ update.sh: local/m の仕様変更に伴い、内容を書き換えるスクリプトを作成。
+  • 2013-10-23, KM, mcxx-2.1.2
+      □ usage: cxx +prefix set-key <cxxkey/prefix> <newkey> 対応
+
+        [DEL:prefix 編集機能: 既に作成した設定の cxxkey の変更:DEL]
+
+  • 2013-10-21, KM, mcxx-2.1.1
+      □ usage: cxx mwg prefix remove <cxxkey/cxxprefix> 対応
+      □ usage: cxx mwg prefix set-default <cxxkey/cxxprefix> 対応
+
+        [DEL:prefix 編集機能: デフォルトの cxxkey の変更:DEL]
+
+      □ usage: cxx mwg * の形式を cxx +* に変更 (取り敢えずは mwg の形式も保持
+        するが廃止予定)。
+  • 2013-07-13, KM, mcxx-2.0.10
+      □ cxx_pref.sh: --version だけでは mingw の判定を仕切れない事があるので、
+        __MINGW32__ Predefined Macro も判定で併用する様に変更。
+      □ cxx mwg prefix add: 自動で mingw かどうかを判定し、 mingw 用の
+        config.src を生成するようにする
+  • 2013-07-10, KM, mcxx-2.0.9
+      □ GCCFLAGS 変数は使用されていない様なので廃止。代わりに各 config.src また
+        は gccflags.src で FLAGS に適切な設定を追加する。
+  • 2013-03-08, KM, mcxx-2.0.8
+      □ Makefile: mat, test_cxx を dist から除外
+      □ cxx_pref.sh: ICC の C++ Compiler として icpc を呼び出す様に変更
+  • 2013-02-22, KM, mcxx-2.0.7
+      □ cxx-cl.sh: /link を vc のオプションとして解釈。以降の - 以外で始まる引
+        数を全てリンカに渡す。
+      □ cxx-cl.sh: -O0 -O -O1 -O2 -Os -fomit-frame-pointer
+        -fno-omit-frame-pointer -g に対応
+      □ cxx-cl.sh: -MP -MT -MF -MD に対応
+      □ cxx-cl.sh: 環境変数 DEPENDENCIES_OUTPUT, SUNPRO_DEPENDENCIES に対応
+      □ cxx-cl.sh: -W* -std=* を無視
+      □ cxx-cl.sh: [bugfix] -M を指定した時に作られる一時ファイルの名前に問題。
+        ディレクトリ部分を分離する様に修正。
+  • 2013-02-20, KM, mcxx-2.0.6
+      □ cxx mwg param paths: [bugfix] 使用するコンパイラの設定を読み込まずに表
+        示していたのを修正。
+  • 2013-02-10, KM, mcxx-2.0.5
+      □ cxx-cl.sh: iconv にオプション -c を指定 (変換できない文字は破棄)
+      □ cxx: cxx mwg param paths を追加
+      □ readme.htm: スタイルシート及びスクリプトの指定に誤りがあったので修正。
+  • 2012-11-06, KM, mcxx-2.0.4
+      □ gccflags.src: --enable-auto-import を windows だけで有効に
+
+        -Wl,--enable-auto-import は windows 以外では不要な様だ。
+
+      □ gccflags.src: コンパイラ名を引数に取る様に変更。
+
+        各コンパイラでの共通設定を書く為。
+
+  • 2012-10-25, KM, mcxx-2.0.3
+      □ [mwg traits] コードの整理。H X M S 等の類似のテスト項目についてのコード
+        が類似しているので、整理。
+      □ [mwg traits] 高速化。
+
+        キャッシュがある場合でも、ソースコードを生成してパイプで渡していた為に
+        、 fork が発生し cygwin 環境で遅くなっていた。ソースコードはキャッシュ
+        がない時にだけ生成する様にした。また、引数が沢山になってきたので、共通
+        関数に渡すパラメータはコマンドライン引数としてではなく、特定のシェル変
+        数 param_* に設定しておく事によって渡す事にした。
+
+  • 2012-10-20, KM, mcxx-2.0.2
+      □ [mwg traits] マクロの存在テスト M を追加
+      □ mwg traits のキャッシュ名決定を bash 関数で実装
+
+        cygwin 上での動作速度を向上させる為、 base64 encode を bash の function
+        だけで実装。
+
+      □ [mwg version] バージョン確認テストを追加
+      □ [mwg traits, bugfix] bash-4.1 以下で mwg.uppercase.set が正しく動作しな
+        いのを修正。
+
+        "$*" とするべき所が "*" となっていた。
+
+  • 2012-10-15, KM, mcxx-2.0.1
+      □ [cxx mwg traits] X 及び D を追加。
+
+        X は与えられた式がコンパイル可能かテストする。 D は与えられた引数のマク
+        ロを定義する。
+
+      □ cxx mwg traits input output
+
+        出力先を明示的に指定可能に。
+
+      □ cxx mwg traits input の出力先を input から自動的に類推。
+      □ cxxprefix の自動推測で今迄 config.guess を同梱していたが、これから独立
+        して自動推測できる様に修正。
+  • 2012-09-22, KM, mcxx-2.0.0
+      □ 移植性。初期自動設定機能の拡充。
+      □ cxx_help.sh
+
+        ヘルプの表示機能
+
+      □ cxx_pref-add_msc16-config.src
+      □ cxx_pref-add_msc16-config.src
+
+        Microsoft C/C++ Compiler (VC) の自動登録
+
+  • 2012-05-23, KM
+      □ mcxx
+      □ mcxx/cxx_pref
+      □ mcxx/m
+
+        設定項目を cxx 本体を弄らずに変更できる様に大幅に整理。mcxx とする。登
+        録されているコンパイラは cxx_pref に、各コンパイラの設定項目は m ディレ
+        クトリに配置。
+
+  • 2011-09-19, KM
+      □ cxx-cl.sh
+      □ cxxar
+      □ cxxar-vc.sh
+
+        更に、vc についても gcc と同じコマンドラインインターフェイスで利用でき
+        る様にラッパを書く。ライブラリの生成についても同様。
+
+  • 2011-08-28, KM
+      □ cxx
+
+        Makefile 等でコンパイラ毎にコマンドを切り替えるのが大変なので、コマンド
+        名を cxx に統一して、環境変数を用いてコンパイラを切り替える様に変更。
+
+  • 2011-07-08, KM
+      □ setup-4.5.2-tdm64.sh
+
+        追加
+
+  • 2011-06-05, KM
+      □ $HOME/env
+
+        環境設定に関連するスクリプトをこの中に統合してみた。更に、各環境毎のパ
+        スの設定が面倒なので、この中に設定毎に使うコマンドの symbolic link を集
+        めた。が、非 cygwin バイナリを symbolic link で呼び出すと不都合が生じる
+        という事が分かって、結局使われなくなった。
+
+  • 2011-04-08, KM
+      □ g++m44
+      □ g++m45
+      □ g++c43
+      □ g++c34
+      □ g++.cyg
+
+        利便性の為に短い名前でも呼べる様にする。
+
+  • 2011-01-06, KM
+      □ g++.mingw4.4.1
+      □ g++.mingw4.5.0
+      □ g++.cygwin4.3.4
+      □ g++.cygwin3.4.4
+
+        事前に設定ファイルを source しなくても、単体のコマンドとして各コンパイ
+        ラを使える様にスクリプトを書く。
+
+  • 2010-10-18, KM
+      □ $HOME/bin/cyggcc3
+      □ $HOME/bin/cyggcc4
+
+        使用するコンパイラ毎に設定用のディレクトリを作成してみる。今の m/
+        $CXXPREFIX/ ディレクトリと同じ発想だが、結局使用せず。
+
+  • 2010-09-23, KM
+      □ setup-libs.sh
+
+        複数のコンパイラで共通のライブラリ設定を分離。
+
+  • 2010-07-21, KM
+      □ setup-vs10.sh
+      □ setup-vs9.sh
+
+        複数の VC コンパイラの為の設定。
+
+  • 2010-05-04, KM
+      □ setup-tdm4.4.1.sh
+      □ setup-msys1.0.sh
+      □ setup-mingw4.5.0.sh
+      □ setup-latex.sh
+
+        複数の MinGW コンパイラを入れたのを機に作成。他のコンパイラを利用する為
+        の設定ファイルを作成。 source setup-tdm4.4.1.sh 等として使う事を想定。
+        その他、それぞれ独立な設定を必要とする物についてファイルを作成。
+
