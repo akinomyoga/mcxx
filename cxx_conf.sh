@@ -106,7 +106,7 @@ while (($#)); do
     (-o)        arg_set_output "$1"; shift ;;
     (-o*)       arg_set_output "${arg:2}"  ;;
     (--cache=*) arg_set_cachedir "${arg#--cache=}" ;;
-    (--log=*)   arg_set_logfile "${arg#--cache=}" ;;
+    (--log=*)   arg_set_logfile "${arg#--log=}" ;;
     (--)        CompilerOptions+=("$@"); break ;;
     (*)         echoe "Unrecognized option '$arg'."; exit 1 ;;
     esac

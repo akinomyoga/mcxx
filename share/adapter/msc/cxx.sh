@@ -57,8 +57,12 @@ arg_dep_target.push () {
   test -n "$1" && arg_dep_target="$arg_dep_target${arg_dep_target:+ }$1"
 }
 function arg_dep_target.push-quoted {
-  local src='$' dst='$$'
-  arg_dep_target.push "${1//$src/$dst}"
+  local file="$1" src dst
+  src='$' dst='$$'
+  file="${file//"$src"/"$dst"}"
+  src=' ' dst='\ '
+  file="${file//"$src"/"$dst"}"
+  arg_dep_target.push "$file"
 }
 
 search_object_file () {
@@ -140,17 +144,17 @@ while test $# -gt 0; do
     add_arg "-Oy-" ;;
   #----------------------------------------------------------------------------
   # Dependencies Options
-  -M)   fMM=M         ;; # fMM = mode: output dependencies
-  -MM)  fMM=MM        ;;
-  -MD)  fMM=M;  fMD=1 ;;
-  -MMD) fMM=MM; fMD=1 ;;
-  -MF)  shift; arg_dep_output.set "$1"     ;;
-  -MF*)        arg_dep_output.set "${1:3}" ;;
-  -MP)  fMP=1 ;;
-  -MT)  shift; arg_dep_target.push "$1" ;;
-  -MT*)        arg_dep_target.push "${1:3}" ;;
-  -MQ)  shift; arg_dep_target.push-quoted "$1" ;;
-  -MQ*)        arg_dep_target.push-quoted "${1:3}" ;;
+  (-M)   fMM=M         ;; # fMM = mode: output dependencies
+  (-MM)  fMM=MM        ;;
+  (-MD)  fMM=M;  fMD=1 ;;
+  (-MMD) fMM=MM; fMD=1 ;;
+  (-MF)  shift; arg_dep_output.set "$1"     ;;
+  (-MF*)        arg_dep_output.set "${1:3}" ;;
+  (-MP)  fMP=1 ;;
+  (-MT)  shift; arg_dep_target.push "$1" ;;
+  (-MT*)        arg_dep_target.push "${1:3}" ;;
+  (-MQ)  shift; arg_dep_target.push-quoted "$1" ;;
+  (-MQ*)        arg_dep_target.push-quoted "${1:3}" ;;
   #----------------------------------------------------------------------------
   -)
     # from standard input
@@ -211,10 +215,9 @@ done
 #------------------------------------------------------------------------------
 
 output_dependencies2 () {
-  if test -z "$fC"; then
-    local compile_argument="-c"
-  else
-    local compile_argument=
+  local compile_argument=
+  if [[ -z $fC ]]; then
+    compile_argument="-c"
   fi
 
   # determine dep_output
@@ -259,32 +262,53 @@ output_dependencies2 () {
   for file in "${inputfiles[@]}"; do
     test -e "$file" || continue
     case "$file" in
-    __cxxtmp.*.cpp)
+    (__cxxtmp.*.cpp)
       inputtmps[${#inputtmps[@]}]="$file"
       push_tmpfile "${tmp%.*}.obj"
       ;;
-    *.c|*.C|*.cpp|*.cxx|*.cc)
+    (*.c|*.C|*.cpp|*.cxx|*.cc)
       if test "${file%/*}" != "$file"; then
         local tmp="${file%/*}/__cxxtmp.${file##*/}"
+        local tmp_obj="__cxxtmp.${file##*/}"
+        tmp_obj="${tmp_obj%.*}.obj"
       else
         local tmp="__cxxtmp.$file"
+        local tmp_obj="__cxxtmp.${file%.*}.obj"
       fi
+
       inputtmps[${#inputtmps[@]}]="$tmp"
       push_tmpfile "$tmp"
-      push_tmpfile "${tmp%.*}.obj"
-      cp -pf "$file" "$tmp"
-      ;;
-    *)
+      push_tmpfile "$tmp_obj"
+      cp -pf "$file" "$tmp" ;;
+    (*)
       inputtmps[${#inputtmps[@]}]="$file"
       ;;
     esac
   done
 
-  echo cl -EHsc $compile_argument -showIncludes "${clargs[@]}" "${inputtmps[@]}" >/dev/stderr
+  IFS=';' eval 'export mcxx_inputfiles="${inputfiles[*]}"'
+  echo cl -EHsc $compile_argument -showIncludes "${clargs[@]}" "${inputtmps[@]}" >&2
   cl -EHsc $compile_argument -showIncludes "${clargs[@]}" "${inputtmps[@]}" \
-    1> >($ICONV|awk '
+    1> >($ICONV | awk '
+      # @fn initialize_fullpath_dict()
+      #   fullpath_dict: 入力ファイル名 → 入力ファイルパス の辞書を作成する。
+      #   環境変数 mcxx_inputfiles を ; で区切って入力ファイル名とする。
+      # @var[out] fullpath_dict[name] = file
+      function initialize_fullpath_dict( _files,_len,_i,_file,_name){
+        _len=split(ENVIRON["mcxx_inputfiles"],_files,";");
+        for(_i=1;_i<=_len;_i++){
+          _file=_files[_i];
+          _name=_file;
+
+          sub(/^.+\//,"",_name);
+          fullpath_dict[_name]=_file;
+          # print "dbg: fullpath_dict[" _name "]=" _file >"/dev/stderr";
+        }
+      }
+
       BEGIN{
         dep_target="'"$arg_dep_target"'"
+        initialize_fullpath_dict();
       }
 
       function phony_add(file){
@@ -319,12 +343,18 @@ output_dependencies2 () {
         sub(/^__cxxtmp\./,"");
         print $0 > "/dev/stderr"
 
+        input=$0;
+        if(fullpath_dict[input]!=""){
+          input=fullpath_dict[input];
+          # print "dbg: found " $0 " -> " input >"/dev/stderr";
+        }
+
         if(dep_target!=""){
-          deps=dep_target ": " $0;
+          deps=dep_target ": " input;
         }else{
           obj=$0;
-          sub(/(\.cpp|\.cc|\.cxx|\.C|\.c)?$/,".obj",obj);
-          deps=obj ": " $0;
+          sub(/\.(cpp|cc|cxx|C|c)?$/,".obj",obj);
+          deps=obj ": " input;
         }
         next;
       }
@@ -335,7 +365,8 @@ output_dependencies2 () {
         file=$0;
         sub(/^ */,"",file);
         gsub(/\\/,"/",file);
-        gsub(/ /,"\\\\ ",file);
+        # gsub(/ /,"\\\\ ",file);
+        gsub(/ /,"\\ ",file);
         gsub(/\$/,"$$");
         if(file ~ /^[a-zA-Z]:\//)
           file="/cygdrive/" tolower(substr(file,1,1)) substr(file,3);
@@ -362,7 +393,7 @@ output_dependencies2 () {
         phony_print();
       }
     '>"$dep_output") \
-    2> >($ICONV>/dev/stderr)
+    2> >($ICONV >&2)
   ret=$?
 }
 
@@ -378,24 +409,24 @@ force_link () {
   ln -s "${src##*/}" "$dst"
 }
 
-if test "$fMM" == M; then
-  output_dependencies2 M
-  #output_global_dependencies
-elif test "$fMM" == MM; then
-  output_dependencies2 MM
-  #output_local_dependencies
-else
-  if test -n "$DEPENDENCIES_OUTPUT"; then
-    arg_dep_output="$DEPENDENCIES_OUTPUT"
-    output_dependencies2 MM
-  elif test -n "$SUNPRO_DEPENDENCIES_OUTPUT"; then
-    arg_dep_output="$SUNPRO_DEPENDENCIES_OUTPUT"
-    output_dependencies2 M
+function simple_compile {
+  # compiles
+  ((${#linkargs[*]})) && fLink=/link
+  echo cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}"
+  if [[ $NCONV ]]; then
+    cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}"
+  else
+    cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}" \
+       1> >($ICONV   ) \
+       2> >($ICONV>&2)
   fi
+  ret=$?
+}
 
-  if test -n "$fC"; then
-    if test -n "$arg_output" -a ${#inputfiles[@]} -eq 1; then
-      if test "${arg_output##*.}" == o; then
+function generate_outputfile_arguments {
+  if [[ $fC ]]; then
+    if [[ $arg_output && ${#inputfiles[@]} -eq 1 ]]; then
+      if [[ ${arg_output##*.} == o ]]; then
         force_link "${arg_output%.o}.obj" "$arg_output"
         arg_output="${arg_output%.o}.obj"
       fi
@@ -403,11 +434,11 @@ else
       add_arg "-Fo$output_object"
     fi
   else
-    test -z "$arg_output" && arg_output=a
+    [[ -z $arg_output ]] && arg_output=a
     arg_output_w="$(cygpath -w "${arg_output%.exe}")"
     add_arg "-Fe$arg_output_w"
     output_object="${arg_output_w%.exe}.obj"
-    if test ${#inputfiles[@]} -eq 1; then
+    if [[ ${#inputfiles[@]} -eq 1 ]]; then
       add_arg "-Fo$output_object"
     fi
   fi
@@ -416,18 +447,40 @@ else
   #   add_arg "-Z7"
   #   # add_arg "-Fd${output_object%.obj}.pdb"
   # fi
-  
-  test "${#linkargs[*]}" -gt 0 && fLink=/link
-  echo cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}"
-  if test -n "$NCONV"; then
-    cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}"
-  else
-    cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}" \
-      1> >($ICONV   ) \
-      2> >($ICONV>&2)
+}
+
+fAnotherCompileForDependencies=
+if [[ $fAnotherCompileForDependencies ]]; then
+  if test "$fMM" == M; then
+    output_dependencies2 M
+  elif test "$fMM" == MM; then
+    output_dependencies2 MM
+  elif [[ $DEPENDENCIES_OUTPUT ]]; then
+    arg_dep_output="$DEPENDENCIES_OUTPUT"
+    output_dependencies2 MM
+  elif [[ $SUNPRO_DEPENDENCIES_OUTPUT ]]; then
+    arg_dep_output="$SUNPRO_DEPENDENCIES_OUTPUT"
+    output_dependencies2 M
   fi
-  ret=$?
+
+  simple_compile
+else
+  generate_outputfile_arguments
+
+  if test "$fMM" == M; then
+    output_dependencies2 M
+  elif test "$fMM" == MM; then
+    output_dependencies2 MM
+  elif [[ $DEPENDENCIES_OUTPUT ]]; then
+    arg_dep_output="$DEPENDENCIES_OUTPUT"
+    output_dependencies2 MM
+  elif [[ $SUNPRO_DEPENDENCIES_OUTPUT ]]; then
+    arg_dep_output="$SUNPRO_DEPENDENCIES_OUTPUT"
+    output_dependencies2 M
+  else
+    simple_compile
+  fi
 fi
 
-test "${#tmpfiles[*]}" -gt 0 && /bin/rm -f "${tmpfiles[@]}"
+((${#tmpfiles[*]})) && /bin/rm -f "${tmpfiles[@]}"
 exit $ret

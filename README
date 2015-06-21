@@ -177,6 +177,7 @@ ChangeLog
       □ cxx +prefix auto: すでに登録されたコンパイラはスキップする機能
       □ cxx +prefix: bugfix, MSC コンパイラ識別 (bash-3 と bash-4 の正規表現の
         取り扱いの違いに起因)
+      □ cxx +config: option `--log=*' to specify the file to output log.
   • 2015-04-27, KM, mcxx-2.1.10
       □ cxx_conf.sh: より複雑な引数に対応。
   • 2014-07-13, KM, mcxx-2.1.9
