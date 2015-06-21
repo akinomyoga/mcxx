@@ -35,7 +35,11 @@ gcc/search-compiler-from-path () {
     CC_="${CC_%.exe}"
   fi
 
-  echo "-> $CXX:$CC" >&2
+  if [[ "$CXX:$CC" == "$CXX_:$CC_" ]]; then
+    echo "-> $CXX:$CC" >&2
+  else
+    echo "-> $CXX:$CC (instance $CXX_:$CC_)" >&2
+  fi
 
   # CXX CC は実際の呼び出しに使う。
   # CXX_ CC_ は実体の場所を表す。

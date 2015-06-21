@@ -23,14 +23,15 @@ generate_cxxprefix () {
   ret=$(
 
     # check if it is vc
-    if [[ "$CXX" =~ "/Microsoft Visual Studio ([1-9][.0-9]*)/VC/bin/cl"(.exe)?$ ]]; then
+    local rex_msc_path='/Microsoft Visual Studio ([1-9][.0-9]*)/VC/bin/cl(.exe)?$'
+    if [[ "$CXX" =~ $rex_msc_path ]]; then
       case "${BASH_REMATCH[1]}" in
       (9.0)  echo -n i686-win-vc-msc15 ; exit ;;
       (10.0) echo -n i686-win-vc-msc16 ; exit ;;
       esac
     fi
 
-    "$CXX" --version 2>&1 |gawk '
+    "$CXX" --version 2>&1 | gawk '
       BEGIN{
         plat=ENVIRON["PLATFORM"];
         sub(/pc-cygwin/,"cygwin",plat);
@@ -327,7 +328,7 @@ function cmd.prefix/auto () {
     IFS=: eval 'fields=($line)'
     local CXXPAIR="${fields[2]:-${fields[0]}}:${fields[3]:-${fields[1]}}"
     if cxxpair.registered "$CXXPAIR"; then
-      echom "Compiler pair '$CXXPAIR' already registered. Skipped." >&2
+      echom "skip: compiler pair '$CXXPAIR' already registered." >&2
       continue
     fi
 
@@ -532,13 +533,16 @@ Operations:
 .[*help*]
 ..shows this help.
 
-.[*auto*]
-..automatically searches and registers compilers in the system
-
-.[*add*]
+.[*add*] [options..]
 ..manually adds settings to use the specified compiler.
 ..the compilers are specified through the environmental variables [C[CC]] and [C[CXX]].
 ..[C[CC]] specifies the c compiler and [C[CXX]] specifies the c++ compiler.
+..
+..[*-q*]  do not ask for confirmation.
+
+.[*auto*] [options..]
+..automatically searches and registers compilers in the system
+..The same options with the [*add*] operation is supported.
 
 .[*remove*] [_key/prefix_]
 ..removes the settings of the specified compiler
