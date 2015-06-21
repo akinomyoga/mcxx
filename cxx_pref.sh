@@ -239,6 +239,18 @@ function cmd.prefix/add {
     break
   done
 
+  # CXXDIR/local/m/cxxprefix/cxxpair.txt
+  if [[ ! $CXXPAIR ]]; then
+    local CXX_=$(readlink -f "$CXX")
+    local CC_=$(readlink -f "$CC")
+    if msc/is_cygwin; then
+      CXX_="${CXX_%.exe}"
+      CC_="${CC_%.exe}"
+    fi
+    CXXPAIR="$CXX_:$CC_"
+  fi
+  echo -n $CXXPAIR > "$cxxdir2"/cxxpair.txt
+
   echox_pop
 
   return $r
@@ -250,7 +262,57 @@ function PLATFORM.initialize {
   fi
 }
 
+# cxxpair: すでに登録されている CXX:CC の pair を管理
+
+cxxpairs=()
+function cxxpair.load {
+  ((${#cxxpairs[@]})) && return
+
+  local pref count=0
+  for pref in "$dirpref"/prefix+*.stamp; do
+    ((count++))
+    local prefix="${pref#$dirpref/prefix+}"
+    prefix="${prefix%.stamp}"
+    local fcxxpair="$CXXDIR/local/m/$prefix/cxxpair.txt"
+    if [[ -s $fcxxpair ]]; then
+      cxxpairs+=("$(< $fcxxpair)")
+    fi
+  done
+
+  if ((count&&!${#cxxpairs[@]})); then
+    cxxpair.update
+  fi
+}
+function cxxpair.registered {
+  cxxpair.load
+
+  local cxxpair
+  for cxxpair in "${cxxpairs[@]}"; do
+    [[ $cxxpair == "$1" ]] && return
+  done
+  return 1
+}
+function cxxpair.update {
+  local pref
+  for pref in "$dirpref"/prefix+*.stamp; do
+    local prefix="${pref#$dirpref/prefix+}"
+    prefix="${prefix%.stamp}"
+    local dst="$CXXDIR/local/m/$prefix/cxxpair.txt"
+    [[ -s $dst ]] && continue
+
+    (
+      function source_if { [[ -s "$1" ]] && source "$@"; }
+      source "$CXXDIR/local/m/$prefix/config.src" cxx
+      acxx=($CXX) acc=($CC)
+      echo -n "$acxx:$acc" > "$dst"
+    )
+    cxxpairs+=("$(< $dst)")
+  done
+}
+
 function cmd.prefix/auto () {
+  local mwg_echox_prog='mcxx +prefix auto'
+
   PLATFORM.initialize
   adapters.initialize
 
@@ -263,6 +325,12 @@ function cmd.prefix/auto () {
   local line fields
   for line in "${COMPILERS[@]}"; do
     IFS=: eval 'fields=($line)'
+    local CXXPAIR="${fields[2]:-${fields[0]}}:${fields[3]:-${fields[1]}}"
+    if cxxpair.registered "$CXXPAIR"; then
+      echom "Compiler pair '$CXXPAIR' already registered. Skipped." >&2
+      continue
+    fi
+
     local CXX="${fields[0]}"
     local CC="${fields[1]}"
     cmd.prefix/add "$@"
@@ -431,14 +499,15 @@ show_cxxprefix_nocache() {
     local DEFPREFIX=$(cat "$fstamp_default")
   fi
 
+  local pref
   for pref in "$dirpref"/prefix+*.stamp; do
     local prefix="${pref#$dirpref/prefix+}"; prefix="${prefix%.stamp}"
     local key="$(cat "$pref")"
 
-    local flag=' '
-    test "$prefix" == "$DEFPREFIX" && flag='*'
+    local flag='-'
+    [[ "$prefix" == "$DEFPREFIX" ]] && flag='*'
 
-    printf "%s %-10s %s\n" "$flag" "$key" "$prefix"
+    printf "%s %-10s %s %s\n" "$flag" "$key" "$prefix"
   done
 }
 

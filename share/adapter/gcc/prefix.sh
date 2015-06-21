@@ -5,31 +5,57 @@
 declare -f gcc.initialized &>/dev/null && return
 function gcc.initialized { echo; }
 
+function msc/is_cygwin {
+  test -x /usr/bin/cygwin1.dll
+}
+
 #------------------------------------------------------------------------------
 # detect-compilers
 
 gcc/search-compiler-from-path () {
   local m_cxx="$1"
   local m_cc="$2"
+  echom -n "$m_cxx:$m_cc ... " >&2
 
   local CXX="$(type -p "$1" 2>/dev/null)"
-  test -z "$CXX" && return 1
+  local CXX_=$(readlink -f "$CXX")
+  if [[ $CXX_ =~ ^.*/m?(cxx|cc)(-[0-9.]+)?$ || ! -x $CXX ]]; then
+    echo no >&2
+    return 1
+  fi
 
   local CC="$(type -p "$2" 2>/dev/null)"
-  test -z "$CC" && CC="$CXX"
+  local CC_=$(readlink -f "$CC")
+  [[ ! -x $CC ]] && CC="$CXX"
 
-  COMPILERS+=("$CXX:$CC")
+  if msc/is_cygwin; then
+    CXX="${CXX%.exe}"
+    CC="${CC%.exe}"
+    CXX_="${CXX_%.exe}"
+    CC_="${CC_%.exe}"
+  fi
+
+  echo "-> $CXX:$CC" >&2
+
+  # CXX CC は実際の呼び出しに使う。
+  # CXX_ CC_ は実体の場所を表す。
+  COMPILERS+=("$CXX:$CC:$CXX_:$CC_")
 }
 
 function gcc.detect-compilers {
+  echom 'enumerating compiler candidates...' >&2
+  echox_push
+
   # icc (Intel C/C++ Compiler): icpc
   gcc/search-compiler-from-path icpc icc
 
   # gcc (GNU Compiler Collection): g++*
-  local CXX
-  while read CXX; do
-    [[ "$CXX" =~ ~$ ]] && continue # skip backup files
-    gcc/search-compiler-from-path "$CXX" "gcc${CXX#g++}"
+  local CXX_ CXX
+  while read CXX_; do
+    # skip backup files
+    [[ "$CXX_" =~ ~$ ]] && continue
+
+    gcc/search-compiler-from-path "$CXX_" "gcc${CXX_#g++}"
   done < <(compgen -c g++ | sort -u)
 
   # g++ を含むコマンドを全て列挙する方法... *-g++
@@ -41,6 +67,8 @@ function gcc.detect-compilers {
   # xlc (IBM XL C/C++) gcc-like interface
   gcc/search-compiler-from-path gxlc++ gxlc
   #gcc/search-compiler-from-path xlc++ xlc
+
+  echox_pop
 }
 
 #------------------------------------------------------------------------------

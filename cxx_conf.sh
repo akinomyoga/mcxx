@@ -52,6 +52,7 @@ fi
 
 #------------------------------------------------------------------------------
 
+CompilerOptions=()
 fname_input=()
 fname_output=
 CACHEDIR=
@@ -94,6 +95,7 @@ while (($#)); do
     (-o)        arg_set_output "$1"; shift ;;
     (-o*)       arg_set_output "${arg:2}"  ;;
     (--cache=*) arg_set_cachedir "${arg#--cache=}" ;;
+    (--)        CompilerOptions+=("$@"); break ;;
     (*)         echoe "Unrecognized option '$arg'."; exit 1 ;;
     esac
   else
@@ -427,7 +429,7 @@ fi
 
 comp_test() {
   fdlog.print_title "$*"
-  cat /dev/stdin | $CXXDIR/cxx -c -xc++ - -o tmp.o 1>&$fdlog 2>&$fdlog
+  $CXXDIR/cxx -c -xc++ - -o tmp.o "${CompilerOptions[@]}" 1>&$fdlog 2>&$fdlog
   r=$?
 
   rm -f tmp.o tmp.obj
@@ -460,6 +462,10 @@ comp_test_cached() {
     else
       echo "${m_ng:-$msg_invalid}"
       :>"$cache"
+      {
+        echo "compiler options: ${CompilerOptions[@]}"
+        $param_cmd_code | sed 's/^/| /'
+      } >&$fdlog
     fi
   fi
 
