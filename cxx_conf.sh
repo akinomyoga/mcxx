@@ -365,8 +365,8 @@ if [[ $COMSPEC && -x $COMSPEC ]]; then
       case "$arg" in
       (-v)  _var="$1"; shift ;;
       (-v*) _var="${arg:2}"  ;;
-      (-v)  hlen="$1"; shift ;;
-      (-v*) hlen="${arg:2}"  ;;
+      (-l)  hlen="$1"; shift ;;
+      (-l*) hlen="${arg:2}"  ;;
       (*)   break ;;
       esac
     done
