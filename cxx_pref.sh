@@ -271,6 +271,7 @@ function cxxpair.load {
 
   local pref count=0
   for pref in "$dirpref"/prefix+*.stamp; do
+    [[ -f $pref ]] || continue
     ((count++))
     local prefix="${pref#$dirpref/prefix+}"
     prefix="${prefix%.stamp}"
@@ -296,6 +297,7 @@ function cxxpair.registered {
 function cxxpair.update {
   local pref
   for pref in "$dirpref"/prefix+*.stamp; do
+    [[ -f $pref ]] || continue
     local prefix="${pref#$dirpref/prefix+}"
     prefix="${prefix%.stamp}"
     local dst="$CXXDIR/local/m/$prefix/cxxpair.txt"

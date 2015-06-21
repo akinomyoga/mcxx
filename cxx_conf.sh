@@ -56,6 +56,7 @@ CompilerOptions=()
 fname_input=()
 fname_output=
 CACHEDIR=
+FLOG=
 function arg_set_output {
   if [[ ! $1 ]]; then
     echoe "the specified output filename is empty."
@@ -87,6 +88,16 @@ function arg_set_cachedir {
 
   CACHEDIR="$1"
 }
+function arg_set_logfile {
+  if [[ ! $1 ]]; then
+    echoe "The specified log file name is empty."
+    exit 1
+  elif [[ $FLOG ]]; then
+    echoe "The log file name '$FLOG' is overwritten by '$1'."
+  fi
+
+  FLOG="$1"
+}
 while (($#)); do
   arg="$1"
   shift
@@ -95,6 +106,7 @@ while (($#)); do
     (-o)        arg_set_output "$1"; shift ;;
     (-o*)       arg_set_output "${arg:2}"  ;;
     (--cache=*) arg_set_cachedir "${arg#--cache=}" ;;
+    (--log=*)   arg_set_logfile "${arg#--cache=}" ;;
     (--)        CompilerOptions+=("$@"); break ;;
     (*)         echoe "Unrecognized option '$arg'."; exit 1 ;;
     esac
@@ -102,6 +114,9 @@ while (($#)); do
     arg_add_input "$arg"
   fi
 done
+
+: ${CACHEDIR:="$CXXDIR2/cxx_conf"}
+: ${FLOG:="$CXXDIR2/cxx_conf.log"}
 
 if [[ ${#fname_input[@]} -eq 0 ]]; then
   fname_input_default=config.sh
@@ -161,7 +176,6 @@ msg_invalid="${t_sgr95}invalid${t_sgr0}"
 #------------------------------------------------------------------------------
 # output
 
-: ${CACHEDIR:="$CXXDIR2/cxx_conf"}
 mkd "$CACHEDIR"
 
 if [[ $fname_output == /dev/stderr ]]; then
@@ -194,8 +208,8 @@ fdout.define () {
 function P { fdout.print "$@"; }
 function D { fdout.define "$@"; }
 
-#exec {fdlog}>>"$CXXDIR2/cxx_conf.log" # bash-4.1
-fdlog=6; exec 6>>"$CXXDIR2/cxx_conf.log"
+#exec {fdlog}>>"$FLOG" # bash-4.1
+fdlog=6; exec 6>>"$FLOG"
 fdlog.print_title() {
   {
     echo '-------------------------------------------------------------------------------'
