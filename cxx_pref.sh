@@ -115,21 +115,110 @@ function adapters.initialize {
 function cmd.prefix/add {
   local mwg_echox_prog='mcxx +prefix add'
 
-  local a_quiet=''
-  local a_default=''
-  while test $# -gt 0 -a "x${1:0:1}" == "x-"; do
-    case "$1" in
-    -q)
-      a_quiet=1 ;;
-    -d)
-      a_default=1 ;;
-    *)
-      echoe "unknown argument '$1'"
-      return 1 ;;
-    esac
+  local a_quiet=
+  local a_default=
+  local regex
+  local compiler_pairs
+  local flagTargetSpecified flagError
+  compiler_pairs=()
+  while (($#)); do
+    local arg="$1"
     shift
+    case "$arg" in
+    (-q) a_quiet=1 ;;
+    (-d) a_default=1 ;;
+    (*)
+      flagTargetSpecified=1
+
+      # コンパイラのペア CXX:CC を指定した場合
+      if regex='^([^:]+):([^:]+)$' && [[ $arg =~ $regex ]]; then
+        local cxx="${BASH_REMATCH[1]}"
+        local cc="${BASH_REMATCH[2]}"
+        if [[ -x $cxx && -x $cc ]]; then
+          compiler_pairs+=("$cxx:$cc")
+          continue
+        fi
+      fi
+
+      # コンパイラのディレクトリを指定した場合
+      if [[ -d $arg ]]; then
+
+        if [[ -x $arg/gcc && -x $arg/g++ ]]; then
+          compiler_pairs+=("$arg/g++:$arg/gcc")
+          continue
+        elif [[ -x $arg/bin/gcc && -x $arg/bin/g++ ]]; then
+          compiler_pairs+=("$arg/bin/g++:$arg/bin/gcc")
+          continue
+        fi
+
+        echoe "$arg (directory): C/C++ Compiler pair not found!"
+        flagError=1
+      fi
+
+      # コンパイラ C/C++ どちらかを指定した場合
+      if [[ -x $arg ]]; then
+        # compiler?
+        if regex='(^|/|-)g(cc|\+\+)$' && [[ $arg =~ $regex ]]; then
+          # gcc/g++ の場合
+          local cxx="${arg%g??}g++"
+          local cc="${arg%g??}gcc"
+          if [[ -x $cxx && -x $cc ]]; then
+            compiler_pairs+=("$cxx:$cc")
+            continue
+          else
+            if [[ ! -x $cxx ]]; then
+              echoe "$arg: Corresponding C++ compiler not found!"
+            else
+              echoe "$arg: Corresponding C compiler not found!"
+            fi
+            flagError=1
+            continue
+          fi
+        fi
+
+        echoe "unrecognized compiler \'$arg'!"
+        flagError=1
+      else
+        echoe "unknown argument \`$arg'!"
+        flagError=1
+      fi ;;
+    esac
   done
 
+  # 引数が何も指定されなかった場合は環境変数 CXX, CC から読み取りを試みる
+  if [[ ! $flagTargetSpecified ]]; then
+    if [[ -x $CXX && -x $CC ]]; then
+      compiler_pairs+=("$CXX:$CC")
+    else
+      flagError=1
+      if [[ ! $CXX ]]; then
+        echoe "environmental variable CXX is not set"
+      elif [[ ! -x $CXX ]]; then
+        echoe "compiler CXX=$CXX not found!"
+      fi
+
+      if [[ ! $CC ]]; then
+        echoe "environmental variable CC is not set"
+      elif [[ ! -x $CC ]]; then
+        echoe "compiler CC=$CC not found!"
+      fi
+    fi
+  fi
+
+  [[ ! $flagError ]] || return 1
+
+  local pair pair2
+  for pair in "${compiler_pairs[@]}"; do
+    IFS=: eval "pair2=(\$pair)"
+    CXX="${pair2[0]}" CC="${pair2[1]}" cmd.prefix/add/register_pair
+  done
+}
+
+## @var[in] CXX
+## @var[in] CC
+## @var[in] a_quiet
+## @var[in] a_default
+function cmd.prefix/add/register_pair {
   #----------------------------------------------------------------------------
   # Read settings
   #----------------------------------------------------------------------------
