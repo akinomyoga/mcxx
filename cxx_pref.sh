@@ -117,6 +117,7 @@ function cmd.prefix/add {
 
   local a_quiet=
   local a_default=
+  local a_key=
   local regex
   local compiler_pairs
   local flagTargetSpecified flagError
@@ -127,6 +128,44 @@ function cmd.prefix/add {
     case "$arg" in
     (-q) a_quiet=1 ;;
     (-d) a_default=1 ;;
+    (-k) a_key="$1"; shift ;;
+    (-k*) a_key="${arg:2}" ;;
+    (--help)
+      local help
+      read -rd '' help <<EOF
+mcxx +prefix add
+
+USAGE: mcxx +prefix add [options] compiler-spec
+
+options
+
+  -q     quiet mode
+
+  -d     set this compiler as the default one
+
+  -k KEY specify the key for this compiler
+
+compiler-spec
+
+  CXX:CC
+      Specify the compiler pair, e.g. /bin/g++:/bin/gcc
+
+  CC
+  CXX
+      Specify one of the c/c++ compiler, e.g. /bin/g++.
+      The c/c++ compiler not specified will be guessed using the specified one.
+      If the c compiler cannot be guessed or found, the operation will fail.
+
+  DIR
+      Specify the directory that contains the compilers.
+      The following compiler pairs will be checked in order.
+
+      - DIR/g++:DIR/gcc
+      - DIR/bin/g++:DIR/bin/gcc
+
+EOF
+      echo "$help"
+      return 0 ;;
     (*)
       flagTargetSpecified=1
 
@@ -158,10 +197,12 @@ function cmd.prefix/add {
       # コンパイラ C/C++ どちらかを指定した場合
       if [[ -x $arg ]]; then
         # compiler?
-        if regex='(^|/|-)g(cc|\+\+)$' && [[ $arg =~ $regex ]]; then
+        if regex='(^|/|-)g(cc|\+\+)([^/]*)$' && [[ $arg =~ $regex ]]; then
           # gcc/g++ の場合
-          local cxx="${arg%g??}g++"
-          local cc="${arg%g??}gcc"
+          local suffix="${BASH_REMATCH[3]}"
+          local compiler_base="${arg::${#arg}-3-${#suffix}}"
+          local cxx="${compiler_base}g++$suffix"
+          local cc="${compiler_base}gcc$suffix"
           if [[ -x $cxx && -x $cc ]]; then
             compiler_pairs+=("$cxx:$cc")
             continue
@@ -176,7 +217,7 @@ function cmd.prefix/add {
           fi
         fi
 
-        echoe "unrecognized compiler \'$arg'!"
+        echoe "unrecognized compiler \`$arg'!"
         flagError=1
       else
         echoe "unknown argument \`$arg'!"
@@ -251,14 +292,38 @@ function cmd.prefix/add/register_pair {
     done
   fi
 
-  # read key
-  local key=1
-  while test -s "$dirpref/key+$key.stamp"; do
-    let key++
-  done
-  if test -z "$a_quiet"; then
-    while echor key "CXXKEY=" "$key";do
-      test ! -s "$dirpref/key+$key.stamp" && break
+  # determine key
+  local key= keyGenerated=
+  # (1) specified in option
+  if [[ $a_key ]]; then
+    if [[ ! -s $dirpref/key+$a_key.stamp ]]; then
+      key="$a_key"
+    else
+      echoe "the specified key '$a_key' is already used."
+    fi
+  fi
+  # (2) simple numbers
+  if [[ ! $key ]]; then
+    local regex
+    if regex='-gcc-([0-9]\.[0-9]\.[0-9])$' && [[ $default_prefix =~ $regex ]]; then
+      key="g${BASH_REMATCH[1]//./}" keyGenerated=1
+    elif regex='-clang-([0-9]\.[0-9])$' && [[ $default_prefix =~ $regex ]]; then
+      key="l${BASH_REMATCH[1]//./}" keyGenerated=1
+    elif regex='-icc-([0-9]+)[.0-9]*$' && [[ $default_prefix =~ $regex ]]; then
+      key="i${BASH_REMATCH[1]}" keyGenerated=1
+    fi
+  fi
+  # (3) simple numbers
+  if [[ ! $key ]]; then
+    key=1 keyGenerated=1
+    while [[ -s $dirpref/key+$key.stamp ]]; do
+      let key++
+    done
+  fi
+  # (4) ask via terminal
+  if [[ $keyGenerated && -t 0 && ! $a_quiet ]]; then
+    while echor key "CXXKEY=" "$key"; do
+      [[ ! -s $dirpref/key+$key.stamp ]] && break
       echoe "specified cxxkey is already used!"
     done
   fi
