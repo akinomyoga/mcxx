@@ -1,16 +1,42 @@
 #!/bin/bash
 
-test -f .cxxkey && export CXXKEY="$(cat .cxxkey)"
-
 dirpref="$CXXDIR/local/prefix"
 
-if test -s "$dirpref/key+$CXXKEY.stamp"; then
-  export CXXPREFIX="$(cat "$dirpref/key+$CXXKEY.stamp")"
-elif test -s "$dirpref/key+default.stamp"; then
-  export CXXPREFIX="$(cat "$dirpref/key+default.stamp")"
-else
-  echo "unrecognized CXXKEY '$CXXKEY'" >/dev/stderr
-  exit 1
-fi
+function CXXPREFIX.initialize {
+  # read .cxxkey
+  if [[ ! $CXXKEY ]]; then
+    local dir="${PWD%/}"
+    while
+      if [[ -f $dir/.cxxkey ]]; then
+        CXXKEY=$(< "$dir/.cxxkey")
+        break
+      fi
 
-export CXXDIR2="$CXXDIR/local/m/$CXXPREFIX"
+      [[ $dir ]] && dir="${dir%/*}"
+    do :; done
+  fi
+
+  : ${CXXKEY:=default}
+
+  if [[ ! -s $dirpref/key+$CXXKEY.stamp ]]; then
+    {
+      printf "cxx: The key CXXKEY=%q is not registered.\n" "$CXXKEY"
+      keys=("$dirpref"/key+*.stamp)
+      if ((${#keys[@]})); then
+        keys=("${keys[@]%%.stamp}")
+        keys=("${keys[@]##*/key+}")
+        IFS= eval 'keys="${keys[*]/#/, }"'
+        echo "cxx: Specify one of the keys: ${keys:2}."
+      else
+        echo "cxx: There are no registered keys."
+        echo "  Consider adding keys using \`cxx +prefix add <compiler>' or \`cxx +prefix auto'."
+      fi
+    } >&2
+    exit 1
+  fi
+
+  export CXXPREFIX=$(< "$dirpref/key+$CXXKEY.stamp")
+  export CXXDIR2="$CXXDIR/local/m/$CXXPREFIX"
+}
+
+CXXPREFIX.initialize
