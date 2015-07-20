@@ -106,41 +106,41 @@ arg_link_specified=
 shopt -s extglob
 while test $# -gt 0; do
   case "$1" in
-  --help) cl -? | $ICONV ; exit   ;;
-  --version) cl | $ICONV ; exit   ;;
-  -I)  shift; add_incdir "$1"     ;;
-  -I*)        add_incdir "${1:2}" ;;
-  -L)  shift; add_libdir "$1"     ;;
-  -L*)        add_libdir "${1:2}" ;;
-  -D)  shift; add_define "$1"     ;;
-  -D*)        add_define "${1:2}" ;;
-  -o)  shift; add_output "$1"     ;;
-  -o*)        add_output "${1:2}" ;;
-  -l*) add_larg "${1:2}.lib"      ;;
-  @(-E|-O2|-O1|-Wall))
+  (--help) cl -? | $ICONV ; exit   ;;
+  (--version) cl | $ICONV ; exit   ;;
+  (-I)  shift; add_incdir "$1"     ;;
+  (-I*)        add_incdir "${1:2}" ;;
+  (-L)  shift; add_libdir "$1"     ;;
+  (-L*)        add_libdir "${1:2}" ;;
+  (-D)  shift; add_define "$1"     ;;
+  (-D*)        add_define "${1:2}" ;;
+  (-o)  shift; add_output "$1"     ;;
+  (-o*)        add_output "${1:2}" ;;
+  (-l*) add_larg "${1:2}.lib"      ;;
+  (-E|-O2|-O1|-Wall)
       add_arg "$1"
       ;;
-  -c)
+  (-c)
     add_arg "$1"
     fC='c'
     ;;
-  -g) add_arg "-Z7" ;;
-  -shared) add_arg "-LD" ;;
+  (-g) add_arg "-Z7" ;;
+  (-shared) add_arg "-LD" ;;
   #----------------------------------------------------------------------------
   # Optimization Options
-  -O0)    add_arg "-Od" ;;
-  -O|-O1) add_arg "-O1" ;;
-  -O2)    add_arg "-O2" ;;
-  -O3)    add_arg "-Ox" ;;
-  -Os)    add_arg "-Os" ;;
-  -fast)
+  (-O0)    add_arg "-Od" ;;
+  (-O|-O1) add_arg "-O1" ;;
+  (-O2)    add_arg "-O2" ;;
+  (-O3)    add_arg "-Ox" ;;
+  (-Os)    add_arg "-Os" ;;
+  (-fast)
     add_arg "-Ox"
     add_arg "-GL"
     add_arg "-arch:SSE2"
     ;;
-  -fomit-frame-pointer)
+  (-fomit-frame-pointer)
     add_arg "-Oy" ;;
-  -fno-omit-frame-pointer)
+  (-fno-omit-frame-pointer)
     add_arg "-Oy-" ;;
   #----------------------------------------------------------------------------
   # Dependencies Options
