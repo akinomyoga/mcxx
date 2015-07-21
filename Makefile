@@ -32,8 +32,6 @@ README: readme.htm
 	w3m -dump $< > $@
 
 .PHONY: ext
-ext: ext/echox ext/mydoc1
-ext/mydoc1: $(MWGDIR)/bin/mydoc1
-	cp -p $< $@
+ext: ext/echox
 ext/echox: $(MWGDIR)/echox
 	cp -p $< $@

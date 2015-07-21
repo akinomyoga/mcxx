@@ -681,41 +681,44 @@ show_cxxprefix() {
 }
 
 function cmd.prefix/help {
-  source "$CXXDIR/ext/mydoc1" <<"EOF"
-usage: cxx +prefix [_operation_] [[_arguments_]...]
+  local bold=$'\e[1m=\e[m'
+  local ul=$'\e[4m=\e[m'
+  local cyan=$'\e[36m=\e[39m'
+  ifold -i -s -w 80 <<EOF
+usage: cxx +prefix ${cyan/=/OPERATION} [${cyan/=/ARGUMENTS}...]
 
-Operations:
+${cyan/=/OPERATION}
 
-.[*help*]
-..shows this help.
+  ${bold/=/help}
+    shows this help.
 
-.[*add*] [options..]
-..manually adds settings to use the specified compiler.
-..the compilers are specified through the environmental variables [C[CC]] and [C[CXX]].
-..[C[CC]] specifies the c compiler and [C[CXX]] specifies the c++ compiler.
-..
-..[*-q*]  do not ask for confirmation.
+  ${bold/=/add} [options..]
+    manually adds settings to use the specified compiler. \
+the compilers are specified through the environmental variables ${cyan/=/CC} and ${cyan/=/CXX}. \
+${cyan/=/CC} specifies the c compiler and ${cyan/=/CXX} specifies the c++ compiler.
+      
+    ${bold/=/-q}  do not ask for confirmation.
 
-.[*auto*] [options..]
-..automatically searches and registers compilers in the system
-..The same options with the [*add*] operation is supported.
+  ${bold/=/auto} [options..]
+    Automatically searches and registers compilers in the system. \
+The same options with the ${bold/=/add} operation is supported.
 
-.[*remove*] [_key/prefix_]
-..removes the settings of the specified compiler
+  ${bold/=/remove} ${ul/=/key/prefix}
+    removes the settings of the specified compiler
 
-.[*set-default*] [_key/prefix_]
-..sets the specified setting to the default setting.
+  ${bold/=/set-default} ${ul/=/key/prefix}
+    sets the specified setting to the default setting.
 
-.[*set-key*] [_key/prefix_] [_newkey_]
-..resets the key for the specified settings.
+  ${bold/=/set-key} ${ul/=/key/prefix} ${ul/=/newkey}
+    resets the key for the specified settings.
 
-.[*list*]
-..prints the list of registered compilers
+  ${bold/=/list}
+    prints the list of registered compilers
 
-.[*get*]
-..prints the [C[CXXPREFIX]] of the current settings
+  ${bold/=/get}
+    prints the ${cyan/=/CXXPREFIX} of the current settings
 
-.[*dbg-generate_cxxprefix*] (for internal use)
+  ${bold/=/dbg-generate_cxxprefix} (for internal use)
 
 EOF
 }

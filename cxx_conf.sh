@@ -50,6 +50,72 @@ if test -t 1; then
   fi
 fi
 
+function cxx/config/help {
+  local bold=$'\e[1m=\e[m'
+  local ul=$'\e[4m=\e[m'
+  local cyan=$'\e[36m=\e[39m'
+  ifold -s --indent='( |[-*] )+' -w 80 <<EOF
+
+usage: cxx +${bold/=/config} [${cyan/=/OPTIONS}...] ${cyan/=/SCRIPTFILE}...
+
+  Generate a header file with various compiler tests. \
+This command can be used to generate a header like ${ul/=/config.h}. \
+The results of the compiler tests are cached for each compiler setting to reduce the test time.
+
+${cyan/=/OPTIONS}
+
+  ${bold/=/-o FILE}
+    Specify the output header file name. The default output file is determined using the first ${cyan/=/SCRIPTFILE} argument.
+
+${cyan/=/SCRIPTFILE}
+
+  The input file, ${cyan/=/SCRIPTFILE}, is a GNU Bash Script to generate the content of the output header file. \
+In this script file, the following special commands can be used to output the content of the output header. \
+Some commands perform compiler tests to output the corresponding \`${ul/=/#define}'s. \
+If the multiple ${cyan/=/SCRIPTFILE} are specified, the script is executed via ${ul/=/source} command in order.
+
+  == Special Commands ==
+
+  P ${cyan/=/line}
+    Output ${cyan/=/line} to the output header.
+
+  D ${cyan/=/MACRO} [${cyan/=/value}]
+    Define or undefine the specified macro.
+    * ${cyan/=/MACRO} = the name of the macro to be defined.
+    * ${cyan/=/value} = the value of the macro. If this is omitted, the macro will be undefined.
+
+  H ${cyan/=/foobar.h} [${cyan/=/MWGCONF_HEADER_FOOBAR_H}]
+    Test if the specified headers are available or not.
+    * ${cyan/=/foobar.h} = include file to check its existence
+    * ${cyan/=/MWGCONF_HEADER_FOOBAR_H}
+      = macro defined when ${cyan/=/foobar.h} exists.
+      The default value is "${ul/=/MWGCONF_HEADER_${cyan/=/FOOBAR_H}}".
+
+  M ${cyan/=/name} ${cyan/=/headers} ${cyan/=/macro}
+    Test if the specified macro is defined or not.
+    * ${cyan/=/name} = name of the test.
+    * ${cyan/=/headers} = headers to include separated with spaces.
+    * ${cyan/=/macro} = macro name to test.
+    MWGCONF_${cyan/=/NAME} will be defined when the expression is valid.
+
+  X ${cyan/=/name} ${cyan/=/headers} ${cyan/=/expression}
+    Test if the expression is valid or not.
+    * ${cyan/=/name} = name of the test.
+    * ${cyan/=/headers} = headers to include separated with spaces.
+    * ${cyan/=/expression} = expression to test.
+    MWGCONF_HAS_${cyan/=/NAME} will be defined when the expression is valid.
+
+  S ${cyan/=/name} ${cyan/=/headers} ${cyan/=/source}
+    Test if the code is valid or not.
+    * ${cyan/=/name} = name of the test.
+    * ${cyan/=/headers} = headers to include separated with spaces.
+    * ${cyan/=/source} = C++ source code to test.
+    MWGCONF_${cyan/=/NAME} will be defined when the expression is valid.
+
+EOF
+  return
+}
+
 #------------------------------------------------------------------------------
 
 CompilerOptions=()
@@ -98,6 +164,9 @@ function arg_set_logfile {
 
   FLOG="$1"
 }
+
+fERROR=
+fDONE=
 while (($#)); do
   arg="$1"
   shift
@@ -108,12 +177,16 @@ while (($#)); do
     (--cache=*) arg_set_cachedir "${arg#--cache=}" ;;
     (--log=*)   arg_set_logfile "${arg#--log=}" ;;
     (--)        CompilerOptions+=("$@"); break ;;
-    (*)         echoe "Unrecognized option '$arg'."; exit 1 ;;
+    (--help)    cxx/config/help; fDONE=1 ;;
+    (*)         echoe "Unrecognized option '$arg'."; fERROR=1 ;;
     esac
   else
     arg_add_input "$arg"
   fi
 done
+
+[[ $fDONE ]] && return
+[[ $fERROR ]] && exit 1
 
 : ${CACHEDIR:="$CXXDIR2/cxx_conf"}
 : ${FLOG:="$CXXDIR2/cxx_conf.log"}
