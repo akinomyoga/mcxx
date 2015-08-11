@@ -52,9 +52,9 @@ fi
 
 function cxx/config/help {
   local bold=$'\e[1m=\e[m'
-  local ul=$'\e[4m=\e[m'
+  local ul=$'\e[4m=\e[24m'
   local cyan=$'\e[36m=\e[39m'
-  ifold -s --indent='( |[-*] )+' -w 80 <<EOF
+  source "$CXXDIR/ext/ifold" -s --indent='( |[-*] )+' -w 80 <<EOF
 
 usage: cxx +${bold/=/config} [${cyan/=/OPTIONS}...] ${cyan/=/SCRIPTFILE}...
 
@@ -64,15 +64,27 @@ The results of the compiler tests are cached for each compiler setting to reduce
 
 ${cyan/=/OPTIONS}
 
-  ${bold/=/-o FILE}
+  ${bold/=/--help}
+    Show this help and exit.
+
+  ${bold/=/-o ${cyan/=/FILE}}
     Specify the output header file name. The default output file is determined using the first ${cyan/=/SCRIPTFILE} argument.
+
+  ${bold/=/--cache=${cyan/=/CACHEDIR}}
+    Specify the directory to save the results of the compiler tests.
+
+  ${bold/=/--log=${cyan/=/LOGFILE}}
+    Specify the log file for the output of the compiler tests.
+
+  ${bold/=/--}
+    This option indicates that that the later arguments are treated as options for the compiler.
 
 ${cyan/=/SCRIPTFILE}
 
   The input file, ${cyan/=/SCRIPTFILE}, is a GNU Bash Script to generate the content of the output header file. \
 In this script file, the following special commands can be used to output the content of the output header. \
 Some commands perform compiler tests to output the corresponding \`${ul/=/#define}'s. \
-If the multiple ${cyan/=/SCRIPTFILE} are specified, the script is executed via ${ul/=/source} command in order.
+If multiple ${cyan/=/SCRIPTFILE}s are specified, the scripts are executed via ${ul/=/source} command in order.
 
   == Special Commands ==
 

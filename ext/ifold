@@ -1,0 +1,673 @@
+#!/bin/bash
+
+# GNU coreutils fold の不満な点
+#
+#   日本語の処理が全然駄目
+#   インデントが正しく処理されない
+#
+# 機能
+#
+#   文字幅
+#     日本語文字(UTF-8)の幅
+#     CSI sequence のスキップ
+#   インデントの伝播
+#     インデント文字の指定
+#     SGR 保存・継続に対応
+#   text-justify
+#   日本語禁則処理
+#   tab 幅の指定
+#   tab を空白に変換
+#   行継続の指定 (--continue, --continue=REGEX)
+#
+# ToDo
+#   text-align: center, right, left
+#   hyphenation?
+#   unicode grapheme clusters?
+#
+# Note
+#   日本語に対応した類似物に jfold という物がある様だ。
+#
+
+export fSPACES=
+export fINDENT=
+export fWIDTH=
+export fTextJustify=1
+export fCharWidth=east
+export fTabWidth=8
+export fContinuation=
+export oIndentType=spaces
+
+declare fBYTES=
+declare fERROR=
+declare fHELP=
+declare files
+files=()
+
+while (($#)); do
+  declare arg="$1"
+  shift
+  case "$arg" in
+  (-b|--bytes) fBYTES=1 ;;
+  (-s|--spaces) fSPACES=1 ;;
+  (--indent=*)
+    fINDENT=${arg#--indent=} ;;
+  (-i|--indent)
+    : ${fINDENT:='[ \t]+'} ;;
+  (--continue=*)
+    fContinuation=${arg#--continue=} ;;
+  (--continue)
+    : ${fContinuation:='\\'} ;;
+  (--width=*) fWIDTH=${arg#--width=} ;;
+  (-w)
+    if (($#>=1)); then
+      fWIDTH="$1"
+      shift
+    else
+      fERROR=1
+      echo 'ifold: the argument to option -w is missing' >&2
+    fi ;;
+  (--tab-width=*) fTabWidth=${arg#--tab-width=} ;;
+  (--text-justify)    fTextJustify=1 ;;
+  (--no-text-justify) fTextJustify=  ;;
+  (--char-width=*)
+    arg=${arg#--char-width=}
+    declare regex
+    if regex='(east|west)' && [[ arg =~ $regex ]]; then
+      fCharWidth="$arg"
+    else
+      fERROR=1
+      echo "ifold: the specified char-width mode, \`--char-width=$arg', unrecognized." >&2
+    fi ;;
+  (--indent-type=*)
+    arg=${arg#--indent-type=}
+    declare regex
+    if regex='(spaces|copy)' && [[ arg =~ $regex ]]; then
+      oIndentType="$arg"
+    else
+      fERROR=1
+      echo "ifold: the specified indent-type, \`--indent-type=$arg', unrecognized." >&2
+    fi ;;
+  (--help)
+    fHELP=1 ;;
+  (*)
+    if [[ ! -e $arg ]]; then
+      fERROR=1
+      echo "ifold: the specified file \`$arg' not found" >&2
+    elif [[ -d $arg ]]; then
+      fERROR=1
+      echo "ifold: the specified path \`$arg' is a directory" >&2
+    else
+      files[${#files[@]}]="$arg"
+    fi ;;
+  esac
+done
+
+if [[ ! $fWIDTH ]]; then
+  if [[ -t 1 ]]; then
+    shopt -s checkwinsize
+    fWIDTH=${COLUMNS:-80}
+    fWIDTH=$((fWIDTH<20?20:fWIDTH>120?120:fWIDTH))
+  else
+    fWIDTH=80
+  fi
+fi
+
+function show_help {
+  local bold=$'\e[1m'
+  local cyan=$'\e[36m'
+  local sgr0=$'\e[m'
+  local ul=$'\e[4m'
+
+  source $0 -i -s -w "$fWIDTH" <<EOF
+usage: ifold [OPTIONS...]
+
+Indented fold.
+
+OPTIONS
+
+  ${bold}-b, --bytes${sgr0}
+  ${bold}-s, --spaces${sgr0}
+
+  ${bold}-w, --width=${cyan}WIDTH${sgr0}
+    Specify the display width by the number of columns. The default is 80 columns.
+
+  ${bold}--char-width=${cyan}CW${sgr0}
+    This option specifies the scheme to determine character widths. \
+Currently there are two schemes: ${cyan}CW${sgr0} = ${ul}east${sgr0} or ${ul}west${sgr0}. The default is \`${ul}--char-width=east${sgr0}'. \
+Most characters in unicode has its fixed width 1 or 2. \
+On the other hand, some part of the characters has the property \`Ambiguous' for East_Asian_Width where the width depends on contexts. \
+In the scheme \`${ul}--char-width=east${sgr0}', all the ambiguous characters are assumed to have width 2, \
+while they are assumed to have width 1 in the scheme \`${ul}--char-width=west${sgr0}'.
+
+  ${bold}--tab-width=${cyan}N${sgr0}
+
+  ${bold}--continue${sgr0}
+  ${bold}--continue=${cyan}REGEX${sgr0}
+    The option \`${ul}--continue${sgr0}' enables the line continuation by a specific sequence at the end of lines. \
+The default line continuation specifier is '\\'. \
+The option \`${ul}--continue=${cyan}REGEX${sgr0}' enables the line continuation with the pattern ${cyan}REGEX${sgr0} at the end of lines. \
+The option \`${ul}--continue=${sgr0}' disables the line continuation. \
+The line continuation is defaultly disabled.
+
+  ${bold}-i, --indent${sgr0}
+  ${bold}--indent=${cyan}REGEX${sgr0}
+  ${bold}--indent=${sgr0}
+  ${bold}--indent-type=${cyan}TYPE${sgr0}
+    The option \`${ul}-i${sgr0}' specifies that the indent is to be preserved, \
+i.e., when the original line has indent at the head, each folded line also has the same width of indent. \
+The option \`${ul}--indent=${cyan}REGEX${sgr0}' enables the indent preservation with the indent pattern begin ${cyan}REGEX${sgr0}. \
+The option \`${ul}--indent=${sgr0}' disables the indent preservation. \
+The default pattern is \`${ul}--indent='[ \t]+'${sgr0}'. \
+The option \`${ul}--indent-type=${cyan}TYPE${sgr0}' controls the type of the indent of the folded lines. \
+If ${cyan}TYPE${sgr0} = ${ul}copy${sgr0} is specified, the exactly same indent with the original line is copied to the folded lines. \
+If ${cyan}TYPE${sgr0} = ${ul}spaces${sgr0} is specified, the indent is replaced with spaces, and only the width of the original indent is preserved. \
+The default indent type is \`--indent-type=spaces'.
+
+  ${bold}--text-justify${sgr0}
+  ${bold}--no-text-justify${sgr0}
+    These options controls the text justification. \
+If \`${ul}--spaces${sgr0}' is specified and the text justification is enabled, the spaces are adjusted to fit the two sides of a line to the display width. \
+The options \`${ul}--text-justify${sgr0}' and \`${ul}--no-text-justify${sgr0}' enables and disables the text justification, respectively. \
+The text justification is enabled at default.
+
+EOF
+}
+
+[[ $fERROR ]] && exit 1
+
+if [[ $fHELP ]]; then
+  show_help
+  exit
+fi
+
+[[ $fBYTES ]] && export LANG=C
+
+gawk '
+  BEGIN{
+    indentPattern=ENVIRON["fINDENT"];
+    handleSpaces=length(ENVIRON["fSPACES"])>=1;
+    textWidth=ENVIRON["fWIDTH"]-1;
+    if(textWidth<=0)textWidth=79;
+
+    textJustify=ENVIRON["fTextJustify"]!="";
+
+    CW_WEST=0;
+    CW_EAST=1;
+    charWidth=ENVIRON["fCharWidth"];
+    if(charWidth=="east")
+      charWidth=CW_EAST;
+    else if(charWidth=="west")
+      charWidth=CW_WEST;
+    else
+      charWidth=CW_WEST;
+
+    IT_SPACES=0;
+    IT_COPY=1;
+    indentType=ENVIRON["oIndentType"];
+    if(indentType=="copy")
+      indentType=IT_COPY;
+    else
+      indentType=IT_SPACES;
+
+    tabWidth=ENVIRON["fTabWidth"];
+
+    fContinuation=ENVIRON["fContinuation"];
+  }
+
+  function max(a,b){return a>b?a:b;}
+  function strrepeat(STR,COUNT, ret){
+    ret="";
+    for(;COUNT>0;COUNT=rshift(COUNT,1)){
+      if(and(COUNT,1))ret=ret STR;
+      STR=STR STR;
+    }
+    return ret;
+  }
+
+  #----------------------------------------------------------------------------
+  # line_breaking = hard
+
+  function hard_fold(content,lines,width, nline){
+    nline=0;
+    while(length(content)>width){
+      lines[nline++]=substr(content,1,width);
+      content=substr(content,width+1);
+    }
+    lines[nline++]=content;
+    return nline;
+  }
+
+  #----------------------------------------------------------------------------
+  # line_breaking = spaces
+
+  function construct_line_from_words(words,start,end,padding, _s,_i,_iN,_nsep,_ipad,_ipadPrev){
+    if(start>=end)return "";
+
+    _s=words[start];
+    _iN=end-start;
+    _nsep=_iN-1;
+    _ipadPrev=0;
+    for(_i=1;_i<_iN;_i++){
+      _ipad=int(padding*_i/_nsep+0.5);
+      _s=_s strrepeat(" ",1+_ipad-_ipadPrev) words[start+_i];
+      _ipadPrev=_ipad;
+    }
+    return _s;
+  }
+
+  function spaces_words2lines(lines,nword,words,width, nline,lw,i,j,wlen,ladd,rest,padding){
+    nline=0;
+    lw=0;j=1;
+    for(i=1;i<=nword;i++){
+      wlen=length(words[i]);
+      ladd=(lw?1:0)+wlen;
+      if(lw+ladd<=width){
+        # 次の単語が行に入りきる場合
+        lw+=ladd;
+        continue;
+      }
+
+      # 今までの行を出力
+      if(wlen>width&&(rest=width-lw-(lw?1:0))>0){
+        # 次の単語が1行に収まらない場合
+        # どうせ収まらないなら好きな所で分断してOK。
+        # →今までの行の末尾に追加。
+        lines[nline++]=construct_line_from_words(words,j,i,0) substr(words[i],1,rest);
+        words[i]=substr(words[i],rest+1);
+        wlen-=rest;
+      }else{
+        padding=textJustify?width-lw:0;
+        lines[nline++]=construct_line_from_words(words,j,i,padding);
+      }
+
+      while(wlen>width){
+        # ■最低でも1文字
+        lines[nline++]=substr(words[i],1,width);
+        words[i]=substr(words[i],width+1);
+        wlen-=width;
+      }
+
+      lw=wlen;
+      j=i;
+    }
+
+    lines[nline++]=construct_line_from_words(words,j,i);
+    return nline;
+  }
+
+  function spaces_fold(content,lines,width, nword,words){
+    nword=split(content,words,/ +/);
+    return spaces_words2lines(lines,nword,words,width);
+  }
+
+  #----------------------------------------------------------------------------
+  # module c2w ... from ble-edit.sh (ble 2015-07-15)
+
+  function c2w_registerEastRanges(codes, n,i){
+    n=split(codes,arr);
+    for(i=1;i<=n;i++)
+      c2wdata_east[c2wdata_east_count++]=sprintf("%c",int(arr[i]));
+  }
+
+  BEGIN{
+    # string values for c2w_basic
+    xA0   =sprintf("%c",0xA0   );
+    x1100 =sprintf("%c",0x1100 );
+    x1160 =sprintf("%c",0x1160 );
+    x2329 =sprintf("%c",0x2329 );
+    x232A =sprintf("%c",0x232A );
+    x2E80 =sprintf("%c",0x2E80 );
+    x303F =sprintf("%c",0x303F );
+    xA4D0 =sprintf("%c",0xA4D0 );
+    xAC00 =sprintf("%c",0xAC00 );
+    xD7A4 =sprintf("%c",0xD7A4 );
+    xF900 =sprintf("%c",0xF900 );
+    xFB00 =sprintf("%c",0xFB00 );
+    xFE30 =sprintf("%c",0xFE30 );
+    xFE70 =sprintf("%c",0xFE70 );
+    xFF00 =sprintf("%c",0xFF00 );
+    xFF61 =sprintf("%c",0xFF61 );
+    xFFE0 =sprintf("%c",0xFFE0 );
+    xFFE7 =sprintf("%c",0xFFE7 );
+    x10000=sprintf("%c",0x10000);
+    x20000=sprintf("%c",0x20000);
+    x2FFFE=sprintf("%c",0x2FFFE);
+    x30000=sprintf("%c",0x30000);
+    x3FFFE=sprintf("%c",0x3FFFE);
+
+    c2wdata_east_count=0;
+    c2w_registerEastRanges("161 162 164 165 167 169 170 171 174 175 176 181 182 187 188 192 198 199 208 209");
+    c2w_registerEastRanges("215 217 222 226 230 231 232 235 236 238 240 241 242 244 247 251 252 253 254 255");
+    c2w_registerEastRanges("257 258 273 274 275 276 283 284 294 296 299 300 305 308 312 313 319 323 324 325");
+    c2w_registerEastRanges("328 332 333 334 338 340 358 360 363 364 462 463 464 465 466 467 468 469 470 471");
+    c2w_registerEastRanges("472 473 474 475 476 477 593 594 609 610 708 709 711 712 713 716 717 718 720 721");
+    c2w_registerEastRanges("728 732 733 734 735 736 913 930 931 938 945 962 963 970 1025 1026 1040 1104 1105 1106");
+    c2w_registerEastRanges("8208 8209 8211 8215 8216 8218 8220 8222 8224 8227 8228 8232 8240 8241 8242 8244 8245 8246 8251 8252");
+    c2w_registerEastRanges("8254 8255 8308 8309 8319 8320 8321 8325 8364 8365 8451 8452 8453 8454 8457 8458 8467 8468 8470 8471");
+    c2w_registerEastRanges("8481 8483 8486 8487 8491 8492 8531 8533 8539 8543 8544 8556 8560 8570 8592 8602 8632 8634 8658 8659");
+    c2w_registerEastRanges("8660 8661 8679 8680 8704 8705 8706 8708 8711 8713 8715 8716 8719 8720 8721 8722 8725 8726 8730 8731");
+    c2w_registerEastRanges("8733 8737 8739 8740 8741 8742 8743 8749 8750 8751 8756 8760 8764 8766 8776 8777 8780 8781 8786 8787");
+    c2w_registerEastRanges("8800 8802 8804 8808 8810 8812 8814 8816 8834 8836 8838 8840 8853 8854 8857 8858 8869 8870 8895 8896");
+    c2w_registerEastRanges("8978 8979 9312 9450 9451 9548 9552 9588 9600 9616 9618 9622 9632 9634 9635 9642 9650 9652 9654 9656");
+    c2w_registerEastRanges("9660 9662 9664 9666 9670 9673 9675 9676 9678 9682 9698 9702 9711 9712 9733 9735 9737 9738 9742 9744");
+    c2w_registerEastRanges("9748 9750 9756 9757 9758 9759 9792 9793 9794 9795 9824 9826 9827 9830 9831 9835 9836 9838 9839 9840");
+    c2w_registerEastRanges("10045 10046 10102 10112 57344 63744 65533 65534 983040 1048574 1048576 1114110");
+  }
+
+  function c2w_basic(code){
+    if(code<xA0)return 1;
+
+    if(code<xFB00){
+      if(x2E80<=code&&code<xA4D0&&code!=x303F||
+        xAC00<=code&&code<xD7A4||
+        xF900<=code||
+        x1100<=code&&code<x1160||
+        code==x2329||code==x232A)return 2;
+    }else if(code<x10000){
+      if(xFF00<=code&&code<xFF61||
+        xFE30<=code&&code<xFE70||
+        xFFE0<=code&&code<xFFE7)return 2;
+    }else{
+      if(x20000<=code&&code<x2FFFE||
+        x30000<=code&&code<x3FFFE)return 2;
+    }
+    return -1;
+  }
+
+  function c2w_west(code, _ret){
+    _ret=c2w_basic(code);
+    return _ret<0?1:_ret;
+  }
+
+  function c2w_east(code, _ret,l,u,m){
+    _ret=c2w_basic(code);
+    if(_ret>=0)return _ret;
+
+    if(code<c2wdata_east[0])return 1;
+
+    l=0;
+    u=c2wdata_east_count;
+    while(l+1<u){
+      if(c2wdata_east[m=int((l+u)/2)]<=code)
+        l=m;
+      else
+        u=m;
+    }
+    return l%2==0?2:1;
+  }
+
+  function c2w(code){
+    if(charWidth==CW_EAST)
+      return c2w_east(code);
+    else
+      return c2w_east(code);
+  }
+
+  # 制御文字 HT BS CR (と現在の位置) も考慮に入れて文字幅を計算する
+  function c2w_ctrl(c,offset,limit,setIsCommutable,  offset2){
+    if(c ~ /[\t\b\r]/){
+      # isCommutable:
+      #   HT/BS/CR で text-justification が壊れる。
+      #   空白を挿入した時の動作が分からないので text-justification を無効にする。
+      if(c=="\t"){
+        if(setIsCommutable)
+          local_isCommutable=0;
+        if(offset<limit){
+          offset2=(offset+tabWidth-1)/tabWidth*tabWidth;
+          if(offset2>=limit)offset2=limit-1;
+          return offset2-offset;
+        }
+      }else if(c=="\b"){
+        if(offset<=0){
+          if(setIsCommutable)
+            local_isCommutable=0;
+        }else{
+          return -1;
+        }
+      }else if(c=="\r"){
+        if(setIsCommutable)
+          local_isCommutable=0;
+        return -offset;
+      }
+      return 0;
+    }else{
+      return c2w(c);
+    }
+  }
+
+  # 指定した幅に何文字まで入れられるかを計算する
+  function c2w_w2nchar(text,offset,limit,  count){
+    count=0;
+    while(text){
+      if(match(text,/^\x1b\[[ -?]*[@-~]/)>0){
+        count+=RLENGTH;
+        text=substr(text,RLENGTH+1);
+        continue;
+      }else{
+        w=c2w_ctrl(substr(text,1,1),offset,limit,0);
+        if(offset+w>limit)break;
+        offset+=w;
+        count++;
+        text=substr(text,2);
+      }
+    }
+    return count;
+  }
+
+  # 指定した文字列の幅を計算する
+  function c2w_a2w(text,offset,limit,  arr,iN,i,c,ret,w,offset2){
+    gsub(/\x1b\[[ -?]*[@-~]/,"",text);
+    if(text ~ /^[ -~]+$/)return length(text);
+
+    ret=w;
+    iN=split(text,arr,"");
+    for(i=1;i<=iN;i++){
+      c=arr[i];
+      w=c2w_ctrl(c,offset,limit,1);
+      ret+=w;
+      offset+=w;
+    }
+    return ret;
+  }
+
+  #----------------------------------------------------------------------------
+  # module sgr
+
+  BEGIN{local_sgr="";}
+
+  function sgr_update(a, seq,isset){
+    if(a ~ /\x1b[[0-9;:]*m/){
+      isset=0;
+
+      # load
+      if(local_sgr){
+        isset=1;
+        seq=substr(local_sgr,3,length(local_sgr)-3);
+      }
+
+      # update
+      while(match(a,/\x1b[[0-9;:]*m/)>0){
+        seq=(isset?seq ";":"") substr(a,RSTART+2,RLENGTH-3);
+        a=substr(a,RSTART+RLENGTH);
+        isset=1;
+      }
+
+      # store
+      if(isset){
+        sub(/^.*(^|;)[0;]*(;|$)/,"",seq);
+        if(seq!="")seq="0;" seq;
+        local_sgr="\x1b[" seq "m";
+      }
+    }
+  }
+
+  #----------------------------------------------------------------------------
+  # line_breaking = east
+
+  function ea_initialize(_gyoto_kinsoku,_gyomatu_kinsoku,_bunri_kinsoku){
+    _gyoto_kinsoku="[）］｝〕〉》」』】〙〗〟’”｠»ゝゞーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻゠〜～・／：；，、。．？！]";
+    _gyomatu_kinsoku="[([｛〔〈《「『【〘〖〝‘“｟«｀]";
+    _bunri_kinsoku="((\x1b\\[[ -?]*[@-~]|[!-~])+|[〳〴]〵|[—…‥]+|.)";
+    ea_cluster="^[ \t]+|^" _gyomatu_kinsoku "*" _bunri_kinsoku _gyoto_kinsoku "*";
+
+  }
+  function ea_split(line,clusters, _mlen,_count){
+    _count=0;
+    while(line!=""){
+      match(line,ea_cluster);
+      if(RSTART==1&&RLENGTH>=1)
+        _mlen=RLENGTH;
+      else
+        _mlen=1;
+      clusters[_count++]=substr(line,1,_mlen);
+      line=substr(line,_mlen+1);
+    }
+    return _count;
+  }
+
+  function ea_concat(clusters,start,end,padding, _scount,_ipad,_ipad_prev,_ret,i){
+    _ret="";
+
+    if(padding){
+      _scount=0;
+      for(i=start;i<end;i++)
+        if(clusters[i] ~ /^([ \t]+|.*[：；，、。．？！])$/)_scount++;
+
+      _ipad_prev=0;
+      _si=0;
+    }
+
+    for(i=start;i<end;i++){
+      if(padding&&(clusters[i] ~ /^([ \t]+|.*[：；，、。．？！])$/)){
+        _ipad=int(padding*++_si/_scount+0.5);
+        _ret=_ret clusters[i] strrepeat(" ",_ipad-_ipad_prev);
+        _ipad_prev=_ipad;
+        continue;
+      }
+
+      _ret=_ret clusters[i];
+    }
+    return _ret;
+  }
+  function east_asian_fold(content,lines,width,tabOffset, _lcount,_clusters,_count,_limit,c,cw,offset,j,i,rest,l0,l1,padding,nc){
+    width=max(1,width);
+    _limit=tabOffset+width;
+    _count=ea_split(content,_clusters);
+    nline=0;
+    offset=tabOffset;j=0;local_isCommutable=1;
+    for(i=0;i<_count;i++){
+      c=_clusters[i];
+
+      cw=c2w_a2w(c,offset,_limit);
+      if(c ~ /^[ \t]+$/)c=strrepeat(" ",cw);
+      rest=_limit-offset;
+      if(cw<=rest){
+        offset+=cw;
+        continue;
+      }
+
+      if(cw>width&&rest>0){
+        # 次の塊が1行に収まらない場合、
+        # どうせ収まらないなら好きな所で分断してOK
+        # →今までの行の末尾に追加。
+        nc=c2w_w2nchar(c,offset,_limit);
+        lines[nline++]=ea_concat(_clusters,j,i) substr(c,1,nc);
+
+        # 残り再計算
+        _clusters[i]=c=substr(c,nc+1);
+        offset=tabOffset;local_isCommutable=1;
+        cw=c2w_a2w(c,offset,_limit);
+      }else{
+        l0=j;l1=i;padding=rest;
+
+        # 行末の空白は潰す
+        if(j<=l1-1&&_clusters[l1-1] ~ /^[ \t]+$/)
+          padding+=length(_clusters[--l1]);
+
+        if(!textJustify||!local_isCommutable)padding=0;
+
+        lines[nline++]=ea_concat(_clusters,l0,l1,padding);
+      }
+
+      while(cw>width){
+        nc=c2w_w2nchar(c,offset,_limit);
+        if(nc==0)nc++; # 最低でも1文字
+        lines[nline++]=substr(c,1,nc);
+
+        # 残り再計算
+        _clusters[i]=c=substr(c,nc+1);
+        offset=tabOffset;local_isCommutable=1;
+        cw=c2w_a2w(c,offset,_limit);
+      }
+
+      offset=tabOffset;local_isCommutable=1;
+      if(_clusters[i] ~ /^[ \t]+$/){
+        # 折り返し時、行頭の空白は跳ばす。
+        j=i+1;
+      }else{
+        cw=c2w_a2w(c,offset,_limit);
+        offset=tabOffset+cw;
+        j=i;
+      }
+    }
+
+    lines[nline++]=ea_concat(_clusters,j,i);
+    return nline;
+  }
+
+  #----------------------------------------------------------------------------
+
+  BEGIN{
+    ea_initialize();
+  }
+
+  {
+    line=line $0;
+    if(fContinuation){
+      if(match(line,fContinuation "$")>0){
+        sub(fContinuation "$","",line);
+        next;
+      }
+    }
+
+    content=line;
+    sub("^(" indentPattern ")","",content);
+    indent=substr(line,1,length(line)-length(content));
+    indentWidth=c2w_a2w(indent,0,textWidth);
+    contentWidth=textWidth-indentWidth;
+
+    if(handleSpaces){
+      # nline=spaces_fold(content,lines,contentWidth);
+      nline=east_asian_fold(content,lines,contentWidth,indentWidth);
+    }else{
+      nline=hard_fold(content,lines,contentWidth);
+    }
+
+    flagCheckSgr=(line ~ /\x1b\[[0-9:;]*m/);
+    if(flagCheckSgr){
+      indentSgr=local_sgr?local_sgr:"\x1b[m";
+      sgr_update(indent);
+    }
+
+    # 出力
+    print indent lines[0];
+    if(flagCheckSgr)sgr_update(lines[0]);
+    if(nline>1){
+      if(indentType==IT_SPACES)
+        indent=strrepeat(" ",indentWidth);
+      if(flagCheckSgr){
+        indent=indentSgr indent;
+        for(i=1;i<nline;i++){
+          print indent local_sgr lines[i];
+          sgr_update(lines[i]);
+        }
+      }else{
+        for(i=1;i<nline;i++)
+          print indent lines[i];
+      }
+    }
+
+    line="";
+  }
+
+' "${files[@]}"

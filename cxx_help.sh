@@ -1,9 +1,10 @@
 #!/bin/bash
 
-bold=$'\e[1m=\e[m'
-ul=$'\e[4m=\e[m'
+function cxx/help {
+  local bold=$'\e[1m=\e[m'
+  local ul=$'\e[4m=\e[m'
 
-ifold -s -i <<EOF
+  source "$CXXDIR/ext/ifold" -s -i -w 80 <<EOF
 cxx ($mcxx_version_string)
 Copyright (C) 2011-2015 Koichi Murase <myoga.murase@gmail.com>.
 
@@ -52,3 +53,6 @@ See ${ul/=/cxx +config --help} for details of the options and the content of ${u
     * paths
 
 EOF
+}
+
+cxx/help
