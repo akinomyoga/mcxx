@@ -2,6 +2,11 @@
 
 declare dirpref="$CXXDIR/local/prefix"
 
+function mcxx/util/readfile {
+  IFS= read -r -d '' "$1" < "$2"
+  eval "$1=\"\${$1%\$'\n'}\""
+}
+
 function CXXPREFIX.initialize {
   # read .cxxkey
   if [[ ! $CXXKEY ]]; then
