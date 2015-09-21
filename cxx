@@ -1,5 +1,16 @@
 #!/bin/bash
 
+#------------------------------------------------------------------------------
+# utils
+
+function mcxx/util/readfile {
+  IFS= read -r -d '' "$1" < "$2"
+  eval "$1=\"\${$1%\$'\n'}\""
+}
+
+#------------------------------------------------------------------------------
+# script directory
+
 shopt -s extglob
 source_if() { test -e "$1" && source "$@" >&2; }
 mkd () { test -d "$1" || mkdir -p "$1"; }
@@ -37,6 +48,31 @@ export CXXDIR
 
 #------------------------------------------------------------------------------
 
+function CXXPREFIX.initialize {
+  source "$CXXDIR/cxx_pref-get.sh"
+  function CXXPREFIX.initialize { :; }
+}
+function CXX_ENCODING.initialize {
+  CXXPREFIX.initialize
+
+  if [[ -f $CXXDIR2/input-charset.txt ]]; then
+    CXX_ENCODING=
+    mcxx/util/readfile CXX_ENCODING "$CXXDIR2/input-charset.txt"
+    [[ $CXX_ENCODING ]] && return
+  fi
+
+  if [[ $SYSTEMROOT && $PROGRAMFILES && $CXXPREFIX != *-cygwin-* ]]; then
+    # windows
+    CXX_ENCODING=cp932
+    # CXX_ENCODING=CP932
+  else
+    CXX_ENCODING=utf-8
+  fi
+
+  function CXX_ENCODING.initialize { :; }
+}
+#------------------------------------------------------------------------------
+
 mcxx_version=20111
 mcxx_version_string="mcxx-2.1.11"
 
@@ -67,14 +103,14 @@ if [[ $mcxx_arg_set ]]; then
     exit ;;
   (prefix)
     if [[ $# -eq 0 || $1 == get ]]; then
-      source "$CXXDIR/cxx_pref-get.sh"
+      CXXPREFIX.initialize
       echo -n "$CXXPREFIX"
     else
       source "$CXXDIR/cxx_pref.sh" "$@"
     fi
     exit ;;
   (config|traits) # xtraits obsoleted
-    source "$CXXDIR/cxx_pref-get.sh"
+    CXXPREFIX.initialize
     if [[ "$1" == clean ]]; then
       rm -f "$CXXDIR2/cxx_conf"/*.stamp
       exit 0
@@ -86,39 +122,41 @@ if [[ $mcxx_arg_set ]]; then
     source "$CXXDIR/cxx_make.sh" "$@"
     exit ;;
   (get|param) # xparam obsoleted
-    source "$CXXDIR/cxx_pref-get.sh"
     case "$1" in
     (cxxdir)
       echo "$CXXDIR"
       exit ;;
     (env-source)
+      CXXPREFIX.initialize
       echo "$CXXDIR2/config.src"
       exit ;;
     (input-charset)
-      if [[ -f $CXXDIR2/input-charset.txt ]]; then
-        cat "$CXXDIR2/input-charset.txt"
-      elif [[ $SYSTEMROOT && $PROGRAMFILES && ${CXXPREFIX/*-cygwin-*/} ]]; then
-        # windows
-        echo -n cp932
-      else
-        echo -n utf-8
-      fi
+      CXX_ENCODING.initialize
+      echo "$CXX_ENCODING"
       exit ;;
     (paths)
+      CXXPREFIX.initialize
       source "$CXXDIR2/config.src" cxx
-
       echo "PATH='$PATH'"
       test -n "$LIBRARY_PATH" && echo "LIBRARY_PATH='$LIBRARY_PATH'"
       test -n "$C_INCLUDE_PATH" && echo "C_INCLUDE_PATH='$C_INCLUDE_PATH'"
       test -n "$CPLUS_INCLUDE_PATH" && echo "CPLUS_INCLUDE_PATH='$CPLUS_INCLUDE_PATH'"
       test -n "$INCLUDE" && echo "INCLUDE='$INCLUDE'"
       test -n "$LIB" && echo "LIB='$LIB'"
-      test -n "$LIBPATH" && echo "LIBPATH='$LIBPATH'"
-      exit 0 ;;
+      test -n "$LIBPATH" && echo "LIBPATH='$LIBPATH'" ;;
+    (--eval)
+      CXXPREFIX.initialize
+      CXX_ENCODING.initialize
+      source "$CXXDIR2/config.src" cxx
+
+      declare result
+      IFS= eval "result=(${@:2})"
+      echo "${result[*]}" ;;
     (*)
       echo "unknown parameter name '$1'" >&2
       exit 1 ;;
-    esac ;;
+    esac
+    exit 0 ;;
   (*)
     echo "unknown command '+$mcxx_arg'" >&2
     exit 1 ;;
@@ -127,13 +165,13 @@ fi
 
 # obsoleted function
 if [[ $1 == --mwg-cxxprefix || $1 == --mwg-get-cxxprefix ]]; then
-  source "$CXXDIR/cxx_pref-get.sh"
-  echo "$CXXPREFIX"
+  CXXPREFIX.initialize
+  echo -n "$CXXPREFIX"
   exit
 fi
 
 # CXXPREFIX/CXXDIR2
-source "$CXXDIR/cxx_pref-get.sh"
+CXXPREFIX.initialize
 
 FLAGS=''
 if [[ $1 == -futf8 ]]; then
@@ -141,12 +179,7 @@ if [[ $1 == -futf8 ]]; then
   CXX_ENCODING=utf-8
 else
   if [[ ! $CXX_ENCODING ]]; then
-    if [[ $OSTYPE == cygwin || $SYSTEMROOT && $PROGRAM_FILES ]]; then
-      # windows
-      CXX_ENCODING=CP932
-    else
-      CXX_ENCODING=utf-8
-    fi
+    CXX_ENCODING.initialize
   fi
 fi
 

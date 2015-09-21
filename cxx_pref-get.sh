@@ -1,11 +1,6 @@
 #!/bin/bash
 
-dirpref="$CXXDIR/local/prefix"
-
-function mcxx/util/readfile {
-  IFS= read -r -d '' "$1" < "$2"
-  eval "$1=\"\${$1%\$'\n'}\""
-}
+declare dirpref="$CXXDIR/local/prefix"
 
 function CXXPREFIX.initialize {
   # read .cxxkey
