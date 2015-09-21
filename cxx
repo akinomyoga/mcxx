@@ -1,16 +1,22 @@
 #!/bin/bash
 
 shopt -s extglob
-source_if() { test -e "$1" && source "$@" >/dev/null; }
+source_if() { test -e "$1" && source "$@" >&2; }
 mkd () { test -d "$1" || mkdir -p "$1"; }
 
 function get_script_directory {
   if test "x$1" == x-v; then
     local _fscr="$3"
-    test -h "$_fscr" && _fscr="$(PATH=/bin:/usr/bin readlink -f "$_fscr")"
+    [[ -h "$_fscr" ]] && _fscr="$(PATH=/bin:/usr/bin readlink -f "$_fscr")"
 
-    local _dir="${_fscr%/*}"
-    test "$_dir" == "$_fscr" && _dir="$MWGDIR/mcxx" # 既定値
+    local _dir
+    if [[ $_fscr == */* ]]; then
+      _dir="${_fscr%/*}"
+    elif [[ -s $_fscr ]]; then
+      _dir=.
+    else
+      _dir="$MWGDIR/mcxx" # 既定値
+    fi
 
     eval "$2=\"\$_dir\""
   else
@@ -21,12 +27,12 @@ function get_script_directory {
 }
 
 # MWGDIR/CXXDIR
-if test -n "$MWGDIR" -o ! -d "$MWGDIR"; then
-  test -d $HOME/.mwg && MWGDIR=$HOME/.mwg
+if [[ ! $MWGDIR || ! -d $MWGDIR ]]; then
+  [[ -d $HOME/.mwg ]] && MWGDIR="$HOME"/.mwg
 fi
 export MWGDIR
 
-get_script_directory -v CXXDIR "$0"
+get_script_directory -v CXXDIR "${BASH_SOURCE:-$0}"
 export CXXDIR
 
 #------------------------------------------------------------------------------
@@ -35,28 +41,31 @@ mcxx_version=20111
 mcxx_version_string="mcxx-2.1.11"
 
 # read +argument
+mcxx_arg_set=
 mcxx_arg=
-if test "x${1:0:1}" == x+; then
-  mcxx_arg="x${1:1}"
+if [[ $1 == +?* ]]; then
+  mcxx_arg="${1:1}"
+  mcxx_arg_set=1
   shift
-elif test "x$1" == xmwg; then
-  mcxx_arg="x$2"
+elif [[ $1 == mwg ]]; then
+  mcxx_arg="$2"
+  mcxx_arg_set=1
   shift 2
 fi
 
-if test -n "$mcxx_arg"; then
+if [[ $mcxx_arg_set ]]; then
   case "$mcxx_arg" in
-  (xhelp)
+  (help)
     source "$CXXDIR/cxx_help.sh"
     exit ;;
-  (xversion)
-    if test -n "$1"; then
-      test $mcxx_version -ge "$1"
+  (version)
+    if [[ $1 ]]; then
+      [[ $mcxx_version -ge $1 ]]
     else
       echo "$mcxx_version_string"
     fi
     exit ;;
-  (xprefix)
+  (prefix)
     if [[ $# -eq 0 || $1 == get ]]; then
       source "$CXXDIR/cxx_pref-get.sh"
       echo -n "$CXXPREFIX"
@@ -64,7 +73,7 @@ if test -n "$mcxx_arg"; then
       source "$CXXDIR/cxx_pref.sh" "$@"
     fi
     exit ;;
-  (xconfig|xtraits) # xtraits obsoleted
+  (config|traits) # xtraits obsoleted
     source "$CXXDIR/cxx_pref-get.sh"
     if [[ "$1" == clean ]]; then
       rm -f "$CXXDIR2/cxx_conf"/*.stamp
@@ -73,10 +82,10 @@ if test -n "$mcxx_arg"; then
       source "$CXXDIR/cxx_conf.sh" "$@"
     fi
     exit ;;
-  (xmake)
+  (make)
     source "$CXXDIR/cxx_make.sh" "$@"
     exit ;;
-  (xget|xparam) # xparam obsoleted
+  (get|param) # xparam obsoleted
     source "$CXXDIR/cxx_pref-get.sh"
     case "$1" in
     (cxxdir)
@@ -86,9 +95,9 @@ if test -n "$mcxx_arg"; then
       echo "$CXXDIR2/config.src"
       exit ;;
     (input-charset)
-      if test -f "$CXXDIR2/input-charset.txt"; then
+      if [[ -f $CXXDIR2/input-charset.txt ]]; then
         cat "$CXXDIR2/input-charset.txt"
-      elif test -n "$SYSTEMROOT" -a -n "$PROGRAMFILES" -a -n "${CXXPREFIX/*-cygwin-*/}"; then
+      elif [[ $SYSTEMROOT && $PROGRAMFILES && ${CXXPREFIX/*-cygwin-*/} ]]; then
         # windows
         echo -n cp932
       else
@@ -111,13 +120,13 @@ if test -n "$mcxx_arg"; then
       exit 1 ;;
     esac ;;
   (*)
-    echo "unknown command '+${mcxx_arg:1}'" >/dev/stderr
+    echo "unknown command '+$mcxx_arg'" >&2
     exit 1 ;;
   esac
 fi
 
 # obsoleted function
-if test "x$1" == x--mwg-cxxprefix -o "x$1" == x--mwg-get-cxxprefix; then
+if [[ $1 == --mwg-cxxprefix || $1 == --mwg-get-cxxprefix ]]; then
   source "$CXXDIR/cxx_pref-get.sh"
   echo "$CXXPREFIX"
   exit
@@ -127,12 +136,12 @@ fi
 source "$CXXDIR/cxx_pref-get.sh"
 
 FLAGS=''
-if test "x$1" == x-futf8; then
+if [[ $1 == -futf8 ]]; then
   shift
   CXX_ENCODING=utf-8
 else
-  if test -z "$CXX_ENCODING"; then
-    if test -n "SYSTEMROOT" -a -n "$PROGRAM_FILES"; then
+  if [[ ! $CXX_ENCODING ]]; then
+    if [[ $OSTYPE == cygwin || $SYSTEMROOT && $PROGRAM_FILES ]]; then
       # windows
       CXX_ENCODING=CP932
     else
@@ -143,17 +152,17 @@ fi
 
 #------------------------------------------------------------------------------
 
-if test ! -s "$CXXDIR2/config.src"; then
-  echo "$0: settings for '$CXXPREFIX' is not found" >/dev/stderr
+if [[ ! -s $CXXDIR2/config.src ]]; then
+  echo "$0: settings for '$CXXPREFIX' is not found" >&2
   exit 1
 fi
 source "$CXXDIR2/config.src" cxx
 #↑内部で更に "$CXXDIR/local/m/common.src" が source される @2013-10-25
 
-test "$#" -eq 0 && FLAGS=''
+[[ $# -eq 0 ]] && FLAGS=''
 
 case "${0##*/}" in
-@(cc|?cc)*)
+(cc*|?cc*)
     $CC $FLAGS "$@"
     ;;
 *)
