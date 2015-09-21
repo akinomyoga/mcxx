@@ -10,21 +10,7 @@
 #------------------------------------------------------------------------------
 # init lib
 
-mwg.Path.GetScriptDirectory.set() {
-  local v="$1"
-  local arg0="$2"
-  local defaultDir="$3"
-  test -h "$arg0" && arg0="$(readlink -f "$arg0")"
-  local dir="${arg0%/*}"
-  if test "$dir" != "$arg0"; then
-    eval "$v='$dir'"
-  else
-    eval "$v='${defaultDir:-$PWD}'"
-  fi
-}
-mwg.Path.GetScriptDirectory.set SHDIR "$0" "$MWGDIR/mcxx"
-
-source "$SHDIR/ext/echox" --color=none
+source "$CXXDIR/ext/echox" --color=none
 mwg_echox_prog="mcxx($CXXDIR) +config"
 
 if test -t 1; then
