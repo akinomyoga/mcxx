@@ -2,13 +2,18 @@
 
 dirpref="$CXXDIR/local/prefix"
 
+function mcxx/util/readfile {
+  IFS= read -r -d '' "$1" < "$2"
+  eval "$1=\"\${$1%\$'\n'}\""
+}
+
 function CXXPREFIX.initialize {
   # read .cxxkey
   if [[ ! $CXXKEY ]]; then
     local dir="${PWD%/}"
     while
       if [[ -f $dir/.cxxkey ]]; then
-        CXXKEY=$(< "$dir/.cxxkey")
+        mcxx/util/readfile CXXKEY "$dir"/.cxxkey
         break
       fi
 
@@ -35,7 +40,8 @@ function CXXPREFIX.initialize {
     exit 1
   fi
 
-  export CXXPREFIX=$(< "$dirpref/key+$CXXKEY.stamp")
+  mcxx/util/readfile CXXPREFIX "$dirpref/key+$CXXKEY.stamp"
+  export CXXPREFIX
   export CXXDIR2="$CXXDIR/local/m/$CXXPREFIX"
 }
 

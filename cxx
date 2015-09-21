@@ -57,11 +57,11 @@ if test -n "$mcxx_arg"; then
     fi
     exit ;;
   (xprefix)
-    if test $# -eq 0; then
+    if [[ $# -eq 0 || $1 == get ]]; then
       source "$CXXDIR/cxx_pref-get.sh"
       echo -n "$CXXPREFIX"
     else
-      "$CXXDIR/cxx_pref.sh" "$@"
+      source "$CXXDIR/cxx_pref.sh" "$@"
     fi
     exit ;;
   (xconfig|xtraits) # xtraits obsoleted
