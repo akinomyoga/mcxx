@@ -281,115 +281,124 @@ output_dependencies2 () {
     esac
   done
 
+  local fLink
+  ((${#linkargs[*]})) && fLink=/link
+
   IFS=';' eval 'export mcxx_inputfiles="${inputfiles[*]}"'
-  echo cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" >&2
-  cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" \
-    1> >($ICONV | awk '
-      # @fn initialize_fullpath_dict()
-      #   fullpath_dict: 入力ファイル名 → 入力ファイルパス の辞書を作成する。
-      #   環境変数 mcxx_inputfiles を ; で区切って入力ファイル名とする。
-      # @var[out] fullpath_dict[name] = file
-      function initialize_fullpath_dict( _files,_len,_i,_file,_name){
-        _len=split(ENVIRON["mcxx_inputfiles"],_files,";");
-        for(_i=1;_i<=_len;_i++){
-          _file=_files[_i];
-          _name=_file;
+  echo cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" $fLink "${linkargs[@]}" >&2
+  {
+    (
+      # http://stackoverflow.com/questions/4489139/bash-process-substitution-and-syncing
+      cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" $fLink "${linkargs[@]}" 2>&4 | $ICONV | awk '
+#------------------------------------------------------------------------------
+# @fn initialize_fullpath_dict()
+#   fullpath_dict: 入力ファイル名 → 入力ファイルパス の辞書を作成する。
+#   環境変数 mcxx_inputfiles を ; で区切って入力ファイル名とする。
+# @var[out] fullpath_dict[name] = file
+function initialize_fullpath_dict( _files,_len,_i,_file,_name){
+  _len=split(ENVIRON["mcxx_inputfiles"],_files,";");
+  for(_i=1;_i<=_len;_i++){
+    _file=_files[_i];
+    _name=_file;
 
-          sub(/^.+\//,"",_name);
-          fullpath_dict[_name]=_file;
-          # print "dbg: fullpath_dict[" _name "]=" _file >"/dev/stderr";
-        }
-      }
+    sub(/^.+\//,"",_name);
+    fullpath_dict[_name]=_file;
+    # print "dbg: fullpath_dict[" _name "]=" _file >"/dev/stderr";
+  }
+}
 
-      BEGIN{
-        dep_target="'"$arg_dep_target"'"
-        initialize_fullpath_dict();
-      }
+BEGIN{
+  dep_target="'"$arg_dep_target"'"
+  initialize_fullpath_dict();
+}
 
-      function phony_add(file){
-        if(phony_added[file])return;
-        phony_added[file]=1;
-        phony_targets=phony_targets file ": \n\n";
-      }
-      function phony_print(file){
-        if('$dep_output_phony_targets'){
-          print phony_targets
-        }
-      }
+function phony_add(file){
+  if(phony_added[file])return;
+  phony_added[file]=1;
+  phony_targets=phony_targets file ": \n\n";
+}
+function phony_print(file){
+  if('$dep_output_phony_targets'){
+    print phony_targets
+  }
+}
 
-      function output_deps(){
-        if(deps=="")return;
-        print deps "\n";
-        deps="";
-        for(file in included)
-          delete included[file];
-      }
+function output_deps(){
+  if(deps=="")return;
+  print deps "\n";
+  deps="";
+  for(file in included)
+    delete included[file];
+}
 
-      /^__cxxtmp\.-\.cpp$/{
-        output_deps();
-        if(dep_target!="")
-          deps=dep_target ": "
-        else
-          deps="-: ";
-        next;
-      }
-      /^__cxxtmp\.[^ \n]+$/{
-        output_deps();
-        sub(/^__cxxtmp\./,"");
-        print $0 > "/dev/stderr"
+/^__cxxtmp\.-\.cpp$/{
+  output_deps();
+  if(dep_target!="")
+    deps=dep_target ": "
+  else
+    deps="-: ";
+  next;
+}
+/^__cxxtmp\.[^ \n]+$/{
+  output_deps();
+  sub(/^__cxxtmp\./,"");
+  print $0 > "/dev/stderr"
 
-        input=$0;
-        if(fullpath_dict[input]!=""){
-          input=fullpath_dict[input];
-          # print "dbg: found " $0 " -> " input >"/dev/stderr";
-        }
+  input=$0;
+  if(fullpath_dict[input]!=""){
+    input=fullpath_dict[input];
+    # print "dbg: found " $0 " -> " input >"/dev/stderr";
+  }
 
-        if(dep_target!=""){
-          deps=dep_target ": " input;
-        }else{
-          obj=$0;
-          sub(/\.(cpp|cc|cxx|C|c)?$/,".obj",obj);
-          deps=obj ": " input;
-        }
-        next;
-      }
-      /^(Note|メモ): (including file|インクルード ファイル): ?/{
-        if(deps=="")deps="-: "
-        sub(/^(Note|メモ): (including file|インクルード ファイル): ?/,"");
+  if(dep_target!=""){
+    deps=dep_target ": " input;
+  }else{
+    obj=$0;
+    sub(/\.(cpp|cc|cxx|C|c)?$/,".obj",obj);
+    deps=obj ": " input;
+  }
+  next;
+}
+/^(Note|メモ): (including file|インクルード ファイル): ?/{
+  if(deps=="")deps="-: "
+  sub(/^(Note|メモ): (including file|インクルード ファイル): ?/,"");
 
-        file=$0;
-        sub(/^ */,"",file);
-        gsub(/\\/,"/",file);
-        # gsub(/ /,"\\\\ ",file);
-        gsub(/ /,"\\ ",file);
-        gsub(/\$/,"$$");
-        if(file ~ /^[a-zA-Z]:\//)
-          file="/cygdrive/" tolower(substr(file,1,1)) substr(file,3);
+  file=$0;
+  sub(/^ */,"",file);
+  gsub(/\\/,"/",file);
+  # gsub(/ /,"\\\\ ",file);
+  gsub(/ /,"\\ ",file);
+  gsub(/\$/,"$$");
+  if(file ~ /^[a-zA-Z]:\//)
+    file="/cygdrive/" tolower(substr(file,1,1)) substr(file,3);
 
-        # guard
-        if(included[file])next;
-        included[file]=1;
-        phony_add(file);
+  # guard
+  if(included[file])next;
+  included[file]=1;
+  phony_add(file);
 
-        # pad=$0;
-        # sub(/[^ ].*$/,"",pad);
-        pad=" "
+  # pad=$0;
+  # sub(/[^ ].*$/,"",pad);
+  pad=" "
 
-        line=pad file;
+  line=pad file;
 
-        '"$CORE"'
-        next;
-      }
-      {
-        print $0 > "/dev/stderr"
-      }
-      END{
-        output_deps();
-        phony_print();
-      }
-    '>"$dep_output") \
-    2> >($ICONV >&2)
-  ret=$?
+  '"$CORE"'
+  next;
+}
+{
+  print $0 > "/dev/stderr"
+}
+END{
+  output_deps();
+  phony_print();
+}
+#------------------------------------------------------------------------------
+      ' 2>&3 1> "$dep_output"
+      exit "${PIPESTATUS[0]}"
+    ) 4>&1 | $ICONV >&2
+    ret="${PIPESTATUS[0]}"
+  } 3>&1
 }
 
 #------------------------------------------------------------------------------

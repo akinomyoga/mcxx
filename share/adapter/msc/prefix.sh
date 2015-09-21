@@ -117,5 +117,5 @@ function msc.create-config {
   " "$CXXDIR/share/adapter/msc/msc$VersionNumber-config.src" > "$CXXDIR2/config.src"
 
   test -f "$CXXDIR2/cxxar" && /bin/rm "$CXXDIR2/cxxar"
-  ln -s "$CXXDIR/share/adapter/msc/cxxar.sh" "$CXXDIR2/cxxar"
+  ln -sr "$CXXDIR/share/adapter/msc/cxxar.sh" "$CXXDIR2/cxxar"
 }
