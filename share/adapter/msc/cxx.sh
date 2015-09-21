@@ -215,11 +215,6 @@ done
 #------------------------------------------------------------------------------
 
 output_dependencies2 () {
-  local compile_argument=
-  if [[ -z $fC ]]; then
-    compile_argument="-c"
-  fi
-
   # determine dep_output
   if test -n "$arg_dep_output"; then
     local dep_output="$arg_dep_output"
@@ -287,8 +282,8 @@ output_dependencies2 () {
   done
 
   IFS=';' eval 'export mcxx_inputfiles="${inputfiles[*]}"'
-  echo cl -EHsc $compile_argument -showIncludes "${clargs[@]}" "${inputtmps[@]}" >&2
-  cl -EHsc $compile_argument -showIncludes "${clargs[@]}" "${inputtmps[@]}" \
+  echo cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" >&2
+  cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" \
     1> >($ICONV | awk '
       # @fn initialize_fullpath_dict()
       #   fullpath_dict: 入力ファイル名 → 入力ファイルパス の辞書を作成する。
