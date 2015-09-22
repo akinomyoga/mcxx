@@ -534,18 +534,18 @@ comp_test_cached() {
   if test -e "$cache"; then
     if test -s "$cache"; then
       result='+'
-      echo "$message_head $param_msg_title ... ${m_ok:-$msg_ok} (cached)"
+      [[ $param_msg_title ]] && echo "$message_head $param_msg_title ... ${m_ok:-$msg_ok} (cached)"
     else
-      echo "$message_head $param_msg_title ... ${m_ng:-$msg_invalid} (cached)"
+      [[ $param_msg_title ]] && echo "$message_head $param_msg_title ... ${m_ng:-$msg_invalid} (cached)"
     fi
   else
-    echo -n "$message_head $param_msg_title ... "
+    [[ $param_msg_title ]] && echo -n "$message_head $param_msg_title ... "
     if $param_cmd_code | comp_test "$param_log_title"; then
       result='+'
-      echo "${m_ok:-$msg_ok}"
+      [[ $param_msg_title ]] && echo "${m_ok:-$msg_ok}"
       echo -n '+' > "$cache"
     else
-      echo "${m_ng:-$msg_invalid}"
+      [[ $param_msg_title ]] && echo "${m_ng:-$msg_invalid}"
       :>"$cache"
       {
         echo "compiler options: ${CompilerOptions[@]}"
@@ -682,8 +682,12 @@ test_expression_cached () {
   mcxx.hash -venc_expr -l64 "$expression"
 
   local param_cachename="X-$enc_head-$enc_expr"
-  local param_log_title="test_expression $header $expression"
-  local param_msg_title="(X) $t_sgr35$title$t_sgr0"
+  local param_log_title="test_expression $headers $expression"
+  if [[ ! $title || $title == - ]]; then
+    local param_msg_title=
+  else
+    local param_msg_title="(X) $t_sgr35$title$t_sgr0"
+  fi
   local param_cmd_code=test_expression.code
   comp_test_cached
 }
@@ -703,7 +707,7 @@ function X {
     (-t?*) title="${arg:2}"  ;;
     (-t)   title="$1"; shift ;;
     (-h?*) fSetHeader=1 headers+=("${arg:2}")  ;;
-    (-h*)  fSetHeader=1 headers+=("$1"); shift ;;
+    (-h*)  fSetHeader=1 headers+=($1); shift ;;
     (*)
       if [[ ! $fSetName ]]; then
         fSetName=1 dname="$arg"

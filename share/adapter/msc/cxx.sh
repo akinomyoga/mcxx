@@ -214,6 +214,22 @@ done
 
 #------------------------------------------------------------------------------
 
+function adapter/msc/color_output {
+  if [[ -t 1 ]]; then
+    sgr1='  '"$1" sgr0=$'\e[m' bold=$'\e[1m'
+  else
+    sgr1= sgr0= bold=
+  fi
+  while IFS= read -r line || [[ $line ]]; do
+    local rex_logo='^Microsoft[[:space:]]*\(R\)|^Copyright[[:space:]]*\(C\)'
+    if [[ $line =~ $rex_logo ]]; then
+      printf "$sgr1$bold%s$sgr0\n" "$line"
+    else
+      printf "$sgr1%s$sgr0\n" "$line"
+    fi
+  done
+}
+
 output_dependencies2 () {
   # determine dep_output
   if test -n "$arg_dep_output"; then
@@ -284,12 +300,15 @@ output_dependencies2 () {
   local fLink
   ((${#linkargs[*]})) && fLink=/link
 
+  local istty=
+  [[ -t 1 ]] && istty=1
+
   IFS=';' eval 'export mcxx_inputfiles="${inputfiles[*]}"'
   echo cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" $fLink "${linkargs[@]}" >&2
   {
     (
       # http://stackoverflow.com/questions/4489139/bash-process-substitution-and-syncing
-      cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" $fLink "${linkargs[@]}" 2>&4 | $ICONV | awk '
+      cl -EHsc -showIncludes "${clargs[@]}" "${inputtmps[@]}" $fLink "${linkargs[@]}" 2>&4 | $ICONV | gawk -v istty="$istty" '
 #------------------------------------------------------------------------------
 # @fn initialize_fullpath_dict()
 #   fullpath_dict: 入力ファイル名 → 入力ファイルパス の辞書を作成する。
@@ -331,6 +350,34 @@ function output_deps(){
     delete included[file];
 }
 
+function print_stdout(line, _head,_note,_rest){
+  if(istty){
+    if(line ~ /^ {8}/)line=substr(line,5);
+    sgr_error="\x1b[31;38;5;131m";
+    sgr_quote="\x1b[32;38;5;28m";
+    if(line ~ /^Microsoft ?\(R\) /||line ~ /^Copyright \(C\) /){
+      line="\x1b[1;36;38;5;25m" line "\x1b[m";
+    }else if(match(line,/^(([^ ]| [^:]| :[^ ])*) : /)>0){
+      _head=substr(line,1,RLENGTH-3);
+      _rest=substr(line,RLENGTH+1);
+      if(match(_rest,/^( *[[:alpha:]][ [:alpha:]]* C[0-9]+)/)>0){
+        _note="\x1b[1m" sgr_error substr(_rest,1,RLENGTH) "\x1b[m"
+        _rest=substr(_rest,RLENGTH+1);
+      }else{
+        _note="";
+      }
+      gsub('"/'[^']*'/"',sgr_quote "&\x1b[m",_rest);
+      line="\x1b[1m" _head "\x1b[m : " _note _rest;
+    }else if(!(line ~ /^[[:space:]]/)){
+      line="\x1b[36;38;5;25m" line "\x1b[m";
+    }else{
+      gsub('"/'[^']*'/"',sgr_quote "&\x1b[m",line);
+    }
+    line="  " line;
+  }
+  print line > "/dev/stderr"
+}
+
 /^__cxxtmp\.-\.cpp$/{
   output_deps();
   if(dep_target!="")
@@ -342,7 +389,7 @@ function output_deps(){
 /^__cxxtmp\.[^ \n]+$/{
   output_deps();
   sub(/^__cxxtmp\./,"");
-  print $0 > "/dev/stderr"
+  print_stdout($0);
 
   input=$0;
   if(fullpath_dict[input]!=""){
@@ -387,7 +434,7 @@ function output_deps(){
   next;
 }
 {
-  print $0 > "/dev/stderr"
+  print_stdout($0);
 }
 END{
   output_deps();
@@ -396,7 +443,7 @@ END{
 #------------------------------------------------------------------------------
       ' 2>&3 1> "$dep_output"
       exit "${PIPESTATUS[0]}"
-    ) 4>&1 | $ICONV >&2
+    ) 4>&1 | $ICONV | adapter/msc/color_output $'\e[31;38;5;131m' >&2
     ret="${PIPESTATUS[0]}"
   } 3>&1
 }
@@ -419,12 +466,17 @@ function simple_compile {
   echo cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}"
   if [[ $NCONV ]]; then
     cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}"
+    ret=$?
   else
-    cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}" \
-       1> >($ICONV   ) \
-       2> >($ICONV>&2)
+    {
+      (
+        cl -EHsc "${clargs[@]}" "${inputfiles[@]}" $fLink "${linkargs[@]}" 2>&4 \
+          | $ICONV | adapter/msc/color_output $'\e[36;38;5;25m' 1>&3
+        exit "${PIPESTATUS[0]}"
+      ) 4>&1 | $ICONV | adapter/msc/color_output $'\e[31;38;5;131m' 1>&4
+      ret="${PIPESTATUS[0]}"
+    } 3>&1 4>&2
   fi
-  ret=$?
 }
 
 function generate_outputfile_arguments {
