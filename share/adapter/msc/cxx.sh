@@ -92,6 +92,14 @@ search_object_file () {
       ;;
   esac
 }
+
+function options:langspec {
+  local spec="$1" arg="$2"
+  if [[ $spec != c++ ]]; then
+    echo "cxx-cl: unrecognized option '$arg' (ignored)"
+    return 1
+  fi
+}
 #------------------------------------------------------------------------------
 # read arguments
 
@@ -116,7 +124,8 @@ while test $# -gt 0; do
   (-D*)        add_define "${1:2}" ;;
   (-o)  shift; add_output "$1"     ;;
   (-o*)        add_output "${1:2}" ;;
-  (-l*) add_larg "${1:2}.lib"      ;;
+  (-l)  shift; add_larg "$1.lib"     ;;
+  (-l*)        add_larg "${1:2}.lib" ;;
   (-E|-O2|-O1|-Wall)
       add_arg "$1"
       ;;
@@ -156,16 +165,20 @@ while test $# -gt 0; do
   (-MQ)  shift; arg_dep_target.push-quoted "$1" ;;
   (-MQ*)        arg_dep_target.push-quoted "${1:3}" ;;
   #----------------------------------------------------------------------------
-  -)
+  (-)
     # from standard input
     push_tmpfile __cxxtmp.-.cpp
     cat /dev/stdin > __cxxtmp.-.cpp
     push_inputfile __cxxtmp.-.cpp
     ;;
-  -xc++)
-    # language specification (ignore)
-    ;;
-  -W*)
+  #----------------------------------------------------------------------------
+  # language specification (ignore)
+  (-x)     options:langspec "$2" "-x $2"; shift ;;
+  (-x*)    options:langspec "${1#-x}"    ;;
+  (-std=*) options:langspec "${1#-std=}" ;;
+  #----------------------------------------------------------------------------
+  # warnings
+  (-W*)
     case "$1" in
     -Wunknown-pragmas)     add_arg -w14068 ;;
     -Wno-unknown-pragmas)  add_arg -wd4068 ;;
@@ -187,9 +200,6 @@ while test $# -gt 0; do
     # TODO 色々の警告を追加
     -W*) echo "cxx-cl: unrecognized option '$1' (ignored)" ;;
     esac
-    ;;
-  -x*|-std=*)
-    echo "cxx-cl: unrecognized option '$1' (ignored)"
     ;;
   -*)
     echo "cxx-cl: unrecognized option '$1'"
