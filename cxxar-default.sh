@@ -12,5 +12,5 @@ if test "x$1" == "x--cp"; then
   exit
 fi
 
-#echo ar cru "$@" '&&' ranlib "$1"
-ar cru "$@" && ranlib "$1"
+[[ $mcxx_verbose ]] && echo ar rc "$@" '&&' ranlib "$1" >&2
+ar rc "$@" && ranlib "$1"
