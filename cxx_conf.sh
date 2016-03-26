@@ -870,7 +870,8 @@ function S {
 # ※ ./ をつけないと /usr/bin の中のコマンドなどを source してしまう。
 test -z "${fname_input##/*}" || fname_input="./$fname_input"
 
-source "$fname_input"
+source "$fname_input" || return
+
 if [[ $fname_output_flag_part ]]; then
   mv -f "$fname_output.part" "$fname_output"
 fi
