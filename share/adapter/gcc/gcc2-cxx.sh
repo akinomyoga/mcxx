@@ -69,7 +69,7 @@ function read-arguments {
     (-MQ*) process-option:-MQ "${arg#-MQ}" ;;
     (-MD|-MMD)
       dep_enabled=1
-      args.push args "$args" ;;
+      array.push args "$arg" ;;
     (-[ILDUulxAzB]|-Xlinker|-Xpreprocessor)
       array.push args "$arg" "$1"
       shift ;;
