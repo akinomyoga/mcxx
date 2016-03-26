@@ -65,7 +65,7 @@ function read-arguments {
     (-MT*) process-option:-MT "${arg#-MT}" ;;
     (-MQ)  process-option:-MQ "$1"; shift ;;
     (-MQ*) process-option:-MQ "${arg#-MQ}" ;;
-    (-[ILDUulxAzB]|-M[FT]|-Xlinker|-Xpreprocessor)
+    (-[ILDUulxAzB]|-Xlinker|-Xpreprocessor)
       args.push "$arg" "$1"
       shift 1 ;;
     (-c)   process-option:-c ;;
@@ -101,6 +101,10 @@ elif [[ -f $arg_input ]]; then
   dep_output_tmp="${arg_input%.*}.d"
 else
   dep_output_tmp="a.d"
+fi
+if [[ -f ${dep_output_tmp##*/} ]]; then
+  # 実は current directory にできる?
+  dep_output_tmp="${dep_output_tmp##*/}"
 fi
 
 # -MF -MT の処理
