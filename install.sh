@@ -2,23 +2,34 @@
 
 version=2.1
 : ${MWGDIR:=$HOME/.mwg}
+: ${PREFIX:=$MWGDIR}
+
+share_directory=$PREFIX/share/mcxx
+local_directory=$PREFIX/share/mcxx/local
 
 function echo-eval {
-  eval "echo \"$@\""
-  eval "$@"
+  local expanded="$*"
+  local a b
+  b='\' a='\\'; expanded=${expanded//$b/$a}
+  b='`' a='\`'; expanded=${expanded//$b/$a}
+  b='"' a='\"'; expanded=${expanded//$b/$a}
+  b='"' a='\"'; expanded=${expanded//$b/$a}
+  echo "$expanded"
+
+  eval "$*"
 }
 
-if test "$PWD" != "$MWGDIR/mcxx"; then
-  echo-eval 'mkdir -p "$MWGDIR/mcxx"'
-  echo-eval 'cp -r ./* "$MWGDIR/mcxx/"'
+if test "$PWD" != "$share_directory"; then
+  echo-eval 'mkdir -p "$share_directory"'
+  echo-eval 'cp -r ./* "$share_directory/"'
 fi
 
 function ln_versioned {
-  local fpath_src="$MWGDIR/mcxx/$1"
+  local fpath_src="$share_directory/$1"
   local fname_dst="${2:-$1}"
   local fname_ver="${2:-$1}-$version"
-  local fpath_dst="$MWGDIR/bin/$fname_dst"
-  local fpath_ver="$MWGDIR/bin/$fname_ver"
+  local fpath_dst="$PREFIX/bin/$fname_dst"
+  local fpath_ver="$PREFIX/bin/$fname_ver"
 
   # .mwg/hoge-version
   echo-eval 'ln -sf "$fpath_src" "$fpath_ver"'
@@ -29,7 +40,7 @@ function ln_versioned {
   fi
 }
 
-mkdir -p "$MWGDIR/bin"
+mkdir -p "$PREFIX/bin"
 ln_versioned cxx   mcxx
 ln_versioned cxx   mcc
 ln_versioned cxxar mcxxar
@@ -37,6 +48,6 @@ type cxx   &>/dev/null || ln_versioned cxx   cxx
 type cc    &>/dev/null || ln_versioned cxx   cc
 type cxxar &>/dev/null || ln_versioned cxxar cxxar
 
-if [[ ! -f $MWGDIR/mcxx/local/prefix/key+default.stamp ]]; then
-  "$MWGDIR/mcxx/cxx" +prefix auto
+if [[ ! -f $local_directory/prefix/key+default.stamp ]]; then
+  "$share_directory/cxx" +prefix auto
 fi

@@ -1,8 +1,11 @@
 #!/bin/bash
 
-: ${MWGDIR:=$HOME/.mwg}
-: ${CXXDIR:=$MWGDIR/mcxx}
-#source $MWGDIR/echox
+# to be sourced from cxx
+if [[ ! -d $CXXDIR ]]; then
+  echo "mcxx/cxx_pref.sh: \$CXXDIR ($CXXDIR) is not a directory." >&2
+  exit 1
+fi
+
 source "$CXXDIR/ext/echox" --color=auto
 mwg_echox_prog="mcxx($CXXDIR) +prefix"
 

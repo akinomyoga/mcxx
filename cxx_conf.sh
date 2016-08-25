@@ -13,8 +13,8 @@
 source "$CXXDIR/ext/echox" --color=none
 mwg_echox_prog="mcxx($CXXDIR) +config"
 
-if test -t 1; then
-  if test -s "$MWGDIR/share/mshex/shrc/mwg_term.sh"; then
+if [[ -t 1 ]]; then
+  if [[ -s $MWGDIR/share/mshex/shrc/mwg_term.sh ]]; then
     source "$MWGDIR/share/mshex/shrc/mwg_term.sh"
     mwg_term.set t_sgr34 fDB
     mwg_term.set t_sgr35 fDM

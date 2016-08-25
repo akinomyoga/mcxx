@@ -73,11 +73,11 @@ shopt -s extglob
 
 # MWGDIR/CXXDIR
 if [[ ! $MWGDIR || ! -d $MWGDIR ]]; then
-  [[ -d $HOME/.mwg ]] && MWGDIR="$HOME"/.mwg
+  [[ -d $HOME/.mwg ]] && MWGDIR="$HOME/.mwg"
 fi
 export MWGDIR
 
-hdirname -v CXXDIR "${BASH_SOURCE:-$0}" "$MWGDIR/mcxx"
+hdirname -v CXXDIR "${BASH_SOURCE:-$0}" "$MWGDIR/share/mcxx"
 export CXXDIR
 
 #------------------------------------------------------------------------------

@@ -73,7 +73,7 @@ fi
 # source
 
 : ${MWGDIR:=$HOME/.mwg}
-hdirname -v CXXDIR "${BASH_SOURCE:-$0}" "$MWGDIR/mcxx"
+hdirname -v CXXDIR "${BASH_SOURCE:-$0}" "$MWGDIR/share/mcxx"
 export CXXDIR
 
 source "$CXXDIR/cxx_pref-get.sh"
