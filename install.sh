@@ -13,15 +13,19 @@ function echo-eval {
   b='\' a='\\'; expanded=${expanded//$b/$a}
   b='`' a='\`'; expanded=${expanded//$b/$a}
   b='"' a='\"'; expanded=${expanded//$b/$a}
-  b='"' a='\"'; expanded=${expanded//$b/$a}
-  echo "$expanded"
+  eval "printf '%s\n' \"$expanded\""
 
   eval "$*"
 }
 
-if test "$PWD" != "$share_directory"; then
+# create directory
+if [[ ! -d $share_directory ]]; then
   echo-eval 'mkdir -p "$share_directory"'
-  echo-eval 'cp -r ./* "$share_directory/"'
+fi
+
+# copy contents
+if [[ $(cd "$PWD"; pwd) != "$(cd "$share_directory"; pwd)" ]]; then
+  echo-eval 'cp -r ./{cxx,cxxar,*.sh,*.src,ext,share} "$share_directory/"'
 fi
 
 function ln_versioned {
