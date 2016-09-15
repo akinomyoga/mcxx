@@ -116,6 +116,7 @@ while test $# -gt 0; do
   case "$1" in
   (--help) cl -? | $ICONV ; exit   ;;
   (--version) cl | $ICONV ; exit   ;;
+  (-isystem) shift; add_incdir "$1" ;;
   (-I)  shift; add_incdir "$1"     ;;
   (-I*)        add_incdir "${1:2}" ;;
   (-L)  shift; add_libdir "$1"     ;;
