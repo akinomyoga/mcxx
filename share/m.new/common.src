@@ -13,7 +13,7 @@ case "$1" in
     FLAGS="$FLAGS -finput-charset=$CXX_ENCODING -fexec-charset=$CXX_ENCODING"
   fi
 
-  if is_windows; then
+  if is_windows && [[ $CXXPREFIX == *-gcc-* ]]; then
     FLAGS="$FLAGS -Wl,--enable-auto-import"
   fi ;;
 esac
