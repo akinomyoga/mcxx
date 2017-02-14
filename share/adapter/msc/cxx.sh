@@ -95,10 +95,15 @@ search_object_file () {
 
 function options:langspec {
   local spec="$1" arg="$2"
-  if [[ $spec != c++ ]]; then
-    echo "cxx-cl: unrecognized option '$arg' (ignored)"
-    return 1
-  fi
+  case "$spec" in
+  (c++|c++98|c++03)
+    return 0 ;;
+  (c++0x|c++11|c++1y|c++14|c++1z|c++17)
+    return 0 ;;
+  (*)
+    echo "cxx-cl: unrecognized option '${arg:-$spec}' (ignored)" >&2
+    return 1 ;;
+  esac
 }
 #------------------------------------------------------------------------------
 # read arguments
@@ -175,8 +180,8 @@ while test $# -gt 0; do
   #----------------------------------------------------------------------------
   # language specification (ignore)
   (-x)     options:langspec "$2" "-x $2"; shift ;;
-  (-x*)    options:langspec "${1#-x}"    ;;
-  (-std=*) options:langspec "${1#-std=}" ;;
+  (-x*)    options:langspec "${1#-x}"    "$1" ;;
+  (-std=*) options:langspec "${1#-std=}" "$1" ;;
   #----------------------------------------------------------------------------
   # warnings
   (-W*)

@@ -237,11 +237,11 @@ esac
 
 source_if "${CXXDIR:-$HOME/.mwg/mcxx}/local/m/loadlib.src" vc
 
-if test "x$1" == xcxx; then
+if [[ $1 == cxx ]]; then
   CXX="$CXXDIR/share/adapter/msc/cxx.sh"
   CC="$CXXDIR/share/adapter/msc/cxx.sh"
   #source_if $UNIDIR/cpplibs/setup_libs_vc.src
-elif test "x$1" == xenv; then
+elif [[ $1 == env ]]; then
   alias cl='cl.exe -EHsc'
   echo ".... setup i686-win-vs-2010"
 fi
