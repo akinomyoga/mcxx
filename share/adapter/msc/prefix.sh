@@ -6,14 +6,14 @@ declare -f msc.initialized &>/dev/null && return
 function msc.initialized { echo; }
 
 function msc/is_cygwin {
-  test -x /usr/bin/cygwin1.dll
+  [[ -x /usr/bin/cygwin1.dll ]]
 }
 function msc/ends_with () {
-  test "${1%$2}" != "$1"
+  [[ $1 == *"$2" ]]
 }
 function msc/ends_with_icase () {
   local text="$(echo $1|tr '[A-Z]' '[a-z]')"
-  test "${text%$2}" != "$text"
+  [[ $text == *"$2" ]]
 }
 
 function msc.detect-compilers {
@@ -25,21 +25,21 @@ function msc.detect-compilers {
     # C:\Program Files\
     # C:\Program Files (x86)\ in Win7
 
-    local cl="$uProg/Microsoft Visual Studio 9.0/VC/bin/cl"
-    test -x "$cl" && COMPILERS+=("$cl:$cl")
-
-    local cl="$uProg/Microsoft Visual Studio 10.0/VC/bin/cl"
-    test -x "$cl" && COMPILERS+=("$cl:$cl")
+    local version
+    for version in 9.0 10.0 11.0 12.0 14.0; do
+      local cl="$uProg/Microsoft Visual Studio $version/VC/bin/cl"
+      [[ -x $cl ]] && COMPILERS+=("$cl:$cl")
+    done
   fi
 
   if uProg64="$(cygpath -u "$PROGRAMW6432" 2>/dev/null)"; then
     # C:\Program Files\ in Win7
 
-    local cl="$uProg64/Microsoft Visual Studio 9.0/VC/bin/cl"
-    test -x "$cl" && COMPILERS+=("$cl:$cl")
-
-    local cl="$uProg64/Microsoft Visual Studio 10.0/VC/bin/cl"
-    test -x "$cl" && COMPILERS+=("$cl:$cl")
+    local version
+    for version in 9.0 10.0 11.0 12.0 14.0; do
+      local cl="$uProg/Microsoft Visual Studio $version/VC/bin/cl"
+      [[ -x $cl ]] && COMPILERS+=("$cl:$cl")
+    done
   fi
 }
 
@@ -51,7 +51,7 @@ function msc.create-config {
 
   local mwg_echox_prog='mcxx+prefix(msc.create-config)'
   local CXXDIR2="${1%/}"
-  if test ! -d "$CXXDIR2"; then
+  if [[ ! -d $CXXDIR2 ]]; then
     echoe 'specified directory does not exist'
     echom "usage $0 \$CXXDIR/local/m/\$CXXPREFIX"
     return 1
@@ -74,10 +74,21 @@ function msc.create-config {
     return 1
   fi
 
-  local VersionNumber
-  if msc/ends_with "$VSDIR" 10.0; then
+  local VersionNumber= VisualStudioVersion=
+  if msc/ends_with "$VSDIR" 14.0; then
+    VisualStudioVersion=14.0
+    VersionNumber=19 # VS 2015
+  elif msc/ends_with "$VSDIR" 12.0; then
+    VisualStudioVersion=12.0
+    VersionNumber=18 # VS 2013
+  elif msc/ends_with "$VSDIR" 11.0; then
+    VisualStudioVersion=11.0
+    VersionNumber=17 # VS 2012
+  elif msc/ends_with "$VSDIR" 10.0; then
+    VisualStudioVersion=10.0
     VersionNumber=16 # VS 2010
   elif msc/ends_with "$VSDIR" 9.0; then
+    VisualStudioVersion=9.0
     VersionNumber=15 # VS 2008
   # elif msc/ends_with "$VSDIR" 8.0; then
   #   VersionNumber=14 # VS 2005
@@ -88,7 +99,7 @@ function msc.create-config {
   fi
 
   local PFDIR="${VSDIR%/*}"
-  if test "$VSDIR" == "$PFDIR"; then
+  if [[ $VSDIR == "$PFDIR" ]]; then
     echom "VSDIR='$VSDIR'"
     echoe 'failed to determine "Microsoft Visual Studio" directory.'
     return 1
@@ -101,21 +112,27 @@ function msc.create-config {
   local uPDIR="$(cygpath -u "$wPDIR")"
   local uWDIR="$(cygpath -u "$wWDIR")"
 
-  if test "$uPDIR" != "$PFDIR"; then
+  if [[ $uPDIR != "$PFDIR" ]]; then
     echoe 'install directroy of "Microsoft Visual Studio" is different from standard "Program Files" directory.'
     return 1
+  fi
+
+  local fname_config_template=$CXXDIR/share/adapter/msc/config.template.src
+  if local cand= && [[ -s ${cand:=$CXXDIR/share/adapter/msc/msc$VersionNumber-config.src} ]]; then
+    fname_config_template=$cand
   fi
 
   local bs='\'
   local wPDIRr="${wPDIR//$bs$bs/$bs$bs}"
   local wWDIRr="${wWDIR//$bs$bs/$bs$bs}"
   sed "
+    s/%%VisualStudioVersion%%/$VisualStudioVersion/
     s|%%wPDIR%%|$wPDIRr|
     s|%%wWDIR%%|$wWDIRr|
     s|%%uPDIR%%|$uPDIR|
     s|%%uWDIR%%|$uWDIR|
-  " "$CXXDIR/share/adapter/msc/msc$VersionNumber-config.src" > "$CXXDIR2/config.src"
+  " "$fname_config_template" > "$CXXDIR2/config.src"
 
-  test -f "$CXXDIR2/cxxar" && /bin/rm "$CXXDIR2/cxxar"
+  [[ -f $CXXDIR2/cxxar ]] && /bin/rm "$CXXDIR2/cxxar"
   ln -sr "$CXXDIR/share/adapter/msc/cxxar.sh" "$CXXDIR2/cxxar"
 }

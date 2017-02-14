@@ -31,6 +31,9 @@ generate_cxxprefix () {
       case "${BASH_REMATCH[1]}" in
       (9.0)  echo -n i686-win-vc-msc15 ; exit ;;
       (10.0) echo -n i686-win-vc-msc16 ; exit ;;
+      (11.0) echo -n i686-win-vc-msc17 ; exit ;;
+      (12.0) echo -n i686-win-vc-msc18 ; exit ;;
+      (14.0) echo -n i686-win-vc-msc19 ; exit ;;
       esac
     fi
 
@@ -87,7 +90,7 @@ generate_cxxprefix () {
     # test if it is mingw
 
     local ftmp="$(cygpath -w $CXXDIR/tmp.o)"
-    if cat <<EOF | "$CXX" -xc - -c -o$ftmp &>/dev/null; then
+    if cat <<EOF | "$CXX" -xc - -c -o"$ftmp" &>/dev/null; then
 #ifndef __MINGW32__
 __choke__
 #endif
@@ -307,13 +310,19 @@ function cmd.prefix/add/register_pair {
   fi
   # (2) simple numbers
   if [[ ! $key ]]; then
-    local regex
+    local regex kcand=
     if regex='-gcc-([0-9]\.[0-9]\.[0-9])$' && [[ $default_prefix =~ $regex ]]; then
-      key="g${BASH_REMATCH[1]//./}" keyGenerated=1
+      kcand="g${BASH_REMATCH[1]//./}"
     elif regex='-clang-([0-9]\.[0-9])$' && [[ $default_prefix =~ $regex ]]; then
-      key="l${BASH_REMATCH[1]//./}" keyGenerated=1
+      kcand="l${BASH_REMATCH[1]//./}"
     elif regex='-icc-([0-9]+)[.0-9]*$' && [[ $default_prefix =~ $regex ]]; then
-      key="i${BASH_REMATCH[1]}" keyGenerated=1
+      kcand="i${BASH_REMATCH[1]}"
+    elif regex='-vc-msc([0-9]+)$' && [[ $default_prefix =~ $regex ]]; then
+      kcand="v${BASH_REMATCH[1]}"
+    fi
+
+    if [[ $kcand && ! -s $dirpref/key+$kcand.stamp ]]; then
+      key="$kcand" keyGenerated=1
     fi
   fi
   # (3) simple numbers
@@ -376,17 +385,17 @@ function cmd.prefix/add/register_pair {
 
   local adp r=0 CXXPREFIX="$prefix"
   for adp in "${adapters[@]}"; do
-    # 関数 $adp.create-config
-    #   $adp.create-config CXXDIR2
-    # \env   [in]  CXXDIR    mcxx インストールディレクトリを指定します。
-    # \env   [in]  CXXPREFIX 設定の名称を指定します。
-    # \env   [in]  CXX       使用する C++ コンパイラを指定します。
-    # \env   [in]  CC        使用する C コンパイラを指定します。
-    # \param [in]  CXXDIR2   構成情報を初期化するディレクトリを指定します。
-    # \return[out] ?         終了状態を返します。
-    #   0 = 正常終了
-    #   1 = 構成情報の初期化に失敗
-    #   2 = この adp で担当するコンパイラではない
+    ## 関数 $adp.create-config
+    ##   $adp.create-config CXXDIR2
+    ## @env   [in]  CXXDIR    mcxx インストールディレクトリを指定します。
+    ## @env   [in]  CXXPREFIX 設定の名称を指定します。
+    ## @env   [in]  CXX       使用する C++ コンパイラを指定します。
+    ## @env   [in]  CC        使用する C コンパイラを指定します。
+    ## @param [in]  CXXDIR2   構成情報を初期化するディレクトリを指定します。
+    ## @return[out] ?         終了状態を返します。
+    ##   0 = 正常終了
+    ##   1 = 構成情報の初期化に失敗
+    ##   2 = この adp で担当するコンパイラではない
 
     "$adp.create-config" "$cxxdir2"; r=$?
     ((r==2)) && continue

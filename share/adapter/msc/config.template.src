@@ -1,0 +1,247 @@
+# -*- mode:sh -*-
+
+#------------------------------------------------------------------------------
+# "C:\Program Files\Microsoft Visual Studio 9.0\VC\vcvarsall.bat"
+# "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat"
+
+VisualStudioVersion='%%VisualStudioVersion%%'
+
+wP32DIR='%%wPDIR%%'
+wWINDIR='%%wWDIR%%'
+uP32DIR='%%uPDIR%%'
+wWINDIR='%%uWDIR%%'
+wVSDIR="$wP32DIR\Microsoft Visual Studio $VisualStudioVersion"
+uVSDIR="$uP32DIR/Microsoft Visual Studio $VisualStudioVersion"
+
+wP64DIR='C:\Program Files'
+uP64DIR='/cygdrive/c/Program Files'
+
+function mcxx/adapters/msc/fill-envvar-dir {
+  if [[ ! ${!1} && -d $2 ]]; then
+    eval "$1=\"\$2\""
+  fi
+}
+
+# 以下は、本来既定で設定されていると思われる環境変数
+mcxx/adapters/msc/fill-envvar-dir VS90COMNTOOLS   "$wP32DIR"'\Microsoft Visual Studio 9.0\Common7\Tools\'
+mcxx/adapters/msc/fill-envvar-dir VS100COMNTOOLS  "$wP32DIR"'\Microsoft Visual Studio 10.0\Common7\Tools\'
+mcxx/adapters/msc/fill-envvar-dir VS110COMNTOOLS  "$wP32DIR"'\Microsoft Visual Studio 11.0\Common7\Tools\'
+mcxx/adapters/msc/fill-envvar-dir VS120COMNTOOLS  "$wP32DIR"'\Microsoft Visual Studio 12.0\Common7\Tools\'
+mcxx/adapters/msc/fill-envvar-dir VS140COMNTOOLS  "$wP32DIR"'\Microsoft Visual Studio 14.0\Common7\Tools\'
+mcxx/adapters/msc/fill-envvar-dir VSSDK90Install  "$wP32DIR"'\Microsoft Visual Studio 2008 SDK\'
+mcxx/adapters/msc/fill-envvar-dir VSSDK140Install "$wP32DIR"'\Microsoft Visual Studio 14.0\VSSDK\'
+
+# 9.0 - 14.0 共通の変数
+export VCINSTALLDIR="$wVSDIR"'\VC\'
+export VSINSTALLDIR="$wVSDIR"'\'
+export FrameworkDIR32="$wWINDIR"'\Microsoft.NET\Framework\'
+export FrameworkDir="$wWINDIR"'\Microsoft.NET\Framework\'
+export DevEnvDir="$wVSDIR"'\Common7\IDE\'
+
+function mcxx/msc/set-path {
+  local envname=$1; shift
+  IFS= eval "export $envname=\"\${*/%/;}\""
+}
+function mcxx/msc/PATH.prepend {
+  IFS=: eval 'export PATH=$*:$PATH'
+}
+
+case "$VisualStudioVersion" in
+(9.0)
+  export FrameworkVersion=v2.0.50727
+  export WindowsSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v7.0A\'
+  uWindowsSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v7.0A\'
+  mcxx_msc_netfx_ver1=v3.5
+  mcxx_msc_netfx_ver2=v2.0.50727
+  mcxx/msc/set-path INCLUDE \
+                    "${VCINSTALLDIR}include" \
+                    "${VCINSTALLDIR}atlmfc\include" \
+                    "${WindowsSdkDir}Include"
+  mcxx/msc/set-path LIB \
+                    "${VCINSTALLDIR}LIB" \
+                    "${VCINSTALLDIR}atlmfc\lib" \
+                    "${WindowsSdkDir}Lib"
+  mcxx/msc/set-path LIBPATH \
+                    "${FrameworkDir}$mcxx_msc_netfx_ver1" \
+                    "${FrameworkDir}$mcxx_msc_netfx_ver2" \
+                    "${LIB%;}"
+  mcxx/msc/PATH.prepend \
+    "$uP32DIR/Microsoft F#/v4.0/" \
+    "$uVSDIR/VSTSDB/Deploy" \
+    "$uVSDIR/Common7/IDE/" \
+    "$uVSDIR/VC/BIN" \
+    "$uVSDIR/Common7/Tools" \
+    "$uWINDIR/Microsoft.NET/Framework/$mcxx_msc_netfx_ver1" \
+    "$uWINDIR/Microsoft.NET/Framework/$mcxx_msc_netfx_ver2" \
+    "$uVSDIR/VC/VCPackages" \
+    "$uP32DIR/HTML Help Workshop" \
+    "$uVSDIR/Team Tools/Performance Tools" \
+    "$uWindowsSdkDir/bin/NETFX 4.0 Tools" \
+    "$uWindowsSdkDir/bin"
+  ;;
+(10.0)
+  export FrameworkVersion=v4.0.21006
+  export FrameworkVersion32=v4.0.21006
+  export Framework35Version=v3.5
+  export FSHARPINSTALLDIR="$wP32DIR"'\Microsoft F#\v4.0\'
+  export WindowsSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v7.0A\'
+  uWindowsSdkDir="$uP32DIR"'/Microsoft SDKs/Windows/v7.0A'
+  mcxx_msc_netfx_ver1=v4.0.21006
+  mcxx_msc_netfx_ver2=v3.5
+  mcxx/msc/set-path INCLUDE \
+                    "${VCINSTALLDIR}INCLUDE" \
+                    "${VCINSTALLDIR}ATLMFC\INCLUDE" \
+                    "${WindowsSdkDir}include"
+  mcxx/msc/set-path LIB \
+                    "${VCINSTALLDIR}LIB" \
+                    "${VCINSTALLDIR}ATLMFC\LIB" \
+                    "${WindowsSdkDir}lib"
+  mcxx/msc/set-path LIBPATH \
+                    "${FrameworkDir}$mcxx_msc_netfx_ver1" \
+                    "${FrameworkDir}$mcxx_msc_netfx_ver2" \
+                    "${LIB%;}"
+  mcxx/msc/PATH.prepend \
+    "$uP32DIR/Microsoft F#/v4.0/" \
+    "$uVSDIR/VSTSDB/Deploy" \
+    "$uVSDIR/Common7/IDE/" \
+    "$uVSDIR/VC/BIN" \
+    "$uVSDIR/Common7/Tools" \
+    "$uWINDIR/Microsoft.NET/Framework/$mcxx_msc_netfx_ver1" \
+    "$uWINDIR/Microsoft.NET/Framework/$mcxx_msc_netfx_ver2" \
+    "$uVSDIR/VC/VCPackages" \
+    "$uP32DIR/HTML Help Workshop" \
+    "$uVSDIR/Team Tools/Performance Tools" \
+    "$uWindowsSdkDir/bin/NETFX 4.0 Tools" \
+    "$uWindowsSdkDir/bin"
+  ;;
+(11.0)
+  # インストールしていない
+  export FrameworkVersion=v4.0.30319
+  export FrameworkVersion32=v4.0.30319
+  export Framework35Version=v3.5
+  export ExtensionSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v8.0\ExtensionSDKs'
+  export WindowsSdkDir="$wP32DIR"'\Windows Kits\8.0\'
+  export WindowsSdkDir_35="$wP32DIR"'\Microsoft SDKs\Windows\v7.0A\Bin\'
+  uWindowsSdkDir="$uP32DIR"'/Windows Kits/8.0'
+  mcxx/msc/set-path INCLUDE \
+                    "$VCINSTALLDIR"'INCLUDE' \
+                    "$WindowsSdkDir"'include\shared' \
+                    "$WindowsSdkDir"'include\um' \
+                    "$WindowsSdkDir"'include\winrt'
+  mcxx/msc/set-path LIB \
+                    "$VCINSTALLDIR"'LIB' \
+                    "$WindowsSdkDir"'lib\win8\um\x86'
+  mcxx/msc/set-path LIBPATH \
+                    "$wWINDIR"'\Microsoft.NET\Framework\v4.0.30319' \
+                    "$wWINDIR"'\Microsoft.NET\Framework\v3.5' \
+                    "$VCINSTALLDIR"'LIB' \
+                    "$WindowsSdkDir"'References\CommonConfiguration\Neutral' \
+                    "$wP32DIR"'\Microsoft SDKs\Windows\v8.0\ExtensionSDKs\Microsoft.VCLibs\$VisualStudioVersion\References\CommonConfiguration\neutral'
+  mcxx/msc/PATH.prepend \
+    "$uVSDIR"'/Common7/IDE' \
+    "$uVSDIR"'/VC/BIN' \
+    "$uVSDIR"'/Common7/Tools' \
+    "$uWINDIR"'/Microsoft.NET/Framework/v4.0.30319' \
+    "$uWINDIR"'/Microsoft.NET/Framework/v3.5' \
+    "$uVSDIR"'/VC/VCPackages' \
+    "$uP32DIR"'/HTML Help Workshop' \
+    "$uWindowsSdkDir"'/bin/x86'
+  ;;
+(12.0)
+  # インストールしていない
+  export FrameworkVersion=v4.0.30319
+  export FrameworkVersion32=v4.0.30319
+  export Framework40Version=v4.0
+  export ExtensionSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v8.1\ExtensionSDKs'
+  export WindowsSDK_ExecutablePath_x64="$wP32DIR"'\Microsoft SDKs\Windows\v8.1A\bin\NETFX 4.5.1 Tools\x64\'
+  export WindowsSDK_ExecutablePath_x86="$wP32DIR"'\Microsoft SDKs\Windows\v8.1A\bin\NETFX 4.5.1 Tools\'
+  export WindowsSdkDir="$wP32DIR"'\Windows Kits\8.1\'
+  uWindowsSdkDir="$uP32DIR"'/Windows Kits/8.1'
+  mcxx/msc/set-path INCLUDE \
+                    "$VCINSTALLDIR"'INCLUDE' \
+                    "$WindowsSdkDir"'include\shared' \
+                    "$WindowsSdkDir"'include\um' \
+                    "$WindowsSdkDir"'include\winrt'
+  mcxx/msc/set-path LIB \
+                    "$VCINSTALLDIR"'LIB' \
+                    "$WindowsSdkDir"'lib\winv6.3\um\x86'
+  mcxx/msc/set-path LIBPATH \
+                    "$wWINDIR"'\Microsoft.NET\Framework\v4.0.30319' \
+                    "$VCINSTALLDIR"'LIB' \
+                    "$WindowsSdkDir"'References\CommonConfiguration\Neutral' \
+                    "$wP32DIR"'\Microsoft SDKs\Windows\v8.1\ExtensionSDKs\Microsoft.VCLibs\$VisualStudioVersion\References\CommonConfiguration\neutral'
+  mcxx/msc/PATH.prepend \
+    "$uVSDIR"'/Common7/IDE/CommonExtensions/Microsoft/TestWindow' \
+    "$uP32DIR"'/MSBuild/$VisualStudioVersion/bin' \
+    "$uVSDIR"'/Common7/IDE' \
+    "$uVSDIR"'/VC/BIN' \
+    "$uVSDIR"'/Common7/Tools' \
+    "$uWINDIR"'/Microsoft.NET/Framework/v4.0.30319' \
+    "$uVSDIR"'/VC/VCPackages' \
+    "$uP32DIR"'/HTML Help Workshop' \
+    "$uWindowsSdkDir"'/bin/x86' \
+    "$uP32DIR"'/Microsoft SDKs/Windows/v8.1A/bin/NETFX 4.5.1 Tools'
+  ;;
+(14.0)
+  export FrameworkVersion=v4.0.30319
+  export FrameworkVersion32=v4.0.30319
+  export Framework40Version=v4.0
+  export ExtensionSdkDir="$wP32DIR"'\Microsoft SDKs\Windows Kits\10\ExtensionSDKs'
+  export FSHARPINSTALLDIR="$wP32DIR"'\Microsoft SDKs\F#\4.0\Framework\v4.0\'
+  export NETFXSDKDir="$wP32DIR"'\Windows Kits\NETFXSDK\4.6.1\'
+  export WindowsLibPath="$wP32DIR"'\Windows Kits\10\UnionMetadata;'"$wP32DIR"'\Windows Kits\10\References'
+  export WindowsSDKLibVersion='10.0.14393.0\'
+  export WindowsSDKVersion='10.0.14393.0\'
+  export WindowsSDK_ExecutablePath_x64="$wP32DIR"'\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\x64\'
+  export WindowsSDK_ExecutablePath_x86="$wP32DIR"'\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\'
+  export WindowsSdkDir="$wP32DIR"'\Windows Kits\10\'
+  uWindowsSdkDir="$uP32DIR"'/Windows Kits/10'
+  mcxx/msc/set-path INCLUDE \
+                    "$VCINSTALLDIR"'INCLUDE' \
+                    "$VCINSTALLDIR"'ATLMFC\INCLUDE' \
+                    "$WindowsSdkDir"'include\10.0.14393.0\ucrt' \
+                    "$wP32DIR"'\Windows Kits\NETFXSDK\4.6.1\include\um' \
+                    "$WindowsSdkDir"'include\10.0.14393.0\shared' \
+                    "$WindowsSdkDir"'include\10.0.14393.0\um' \
+                    "$WindowsSdkDir"'include\10.0.14393.0\winrt'
+  mcxx/msc/set-path LIB \
+                    "$VCINSTALLDIR"'LIB' \
+                    "$VCINSTALLDIR"'ATLMFC\LIB' \
+                    "$WindowsSdkDir"'lib\10.0.14393.0\ucrt\x86' \
+                    "$wP32DIR"'\Windows Kits\NETFXSDK\4.6.1\lib\um\x86' \
+                    "$WindowsSdkDir"'lib\10.0.14393.0\um\x86'
+  mcxx/msc/set-path LIBPATH \
+                    "$wWINDIR"'\Microsoft.NET\Framework\v4.0.30319' \
+                    "$VCINSTALLDIR"'LIB' \
+                    "$VCINSTALLDIR"'ATLMFC\LIB' \
+                    "$WindowsSdkDir"'UnionMetadata' \
+                    "$WindowsSdkDir"'References' \
+                    "$wP32DIR"'\Microsoft SDKs\Windows Kits\10\ExtensionSDKs\Microsoft.VCLibs\$VisualStudioVersion\References\CommonConfiguration\neutral'
+  mcxx/msc/PATH.prepend \
+    "$uVSDIR"'/Common7/IDE/CommonExtensions/Microsoft/TestWindow' \
+    "$uP32DIR"'/Microsoft SDKs/F#/4.0/Framework/v4.0' \
+    "$uP32DIR"'/MSBuild/$VisualStudioVersion/bin' \
+    "$uVSDIR"'/Common7/IDE' \
+    "$uVSDIR"'/VC/BIN' \
+    "$uVSDIR"'/Common7/Tools' \
+    "$uWINDIR"'/Microsoft.NET/Framework/v4.0.30319' \
+    "$uVSDIR"'/VC/VCPackages' \
+    "$uP32DIR"'/HTML Help Workshop' \
+    "$uVSDIR"'/Team Tools/Performance Tools' \
+    "$uWindowsSdkDir"'/bin/x86' \
+    "$uP32DIR"'/Microsoft SDKs/Windows/v10.0A/bin/NETFX 4.6.1 Tools'
+  ;;
+esac
+
+#------------------------------------------------------------------------------
+
+source_if "${CXXDIR:-$HOME/.mwg/mcxx}/local/m/loadlib.src" vc
+
+if test "x$1" == xcxx; then
+  CXX="$CXXDIR/share/adapter/msc/cxx.sh"
+  CC="$CXXDIR/share/adapter/msc/cxx.sh"
+  #source_if $UNIDIR/cpplibs/setup_libs_vc.src
+elif test "x$1" == xenv; then
+  alias cl='cl.exe -EHsc'
+  echo ".... setup i686-win-vs-2010"
+fi
