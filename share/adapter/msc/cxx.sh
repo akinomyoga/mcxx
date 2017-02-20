@@ -507,7 +507,7 @@ function generate_outputfile_arguments {
     fi
   else
     [[ -z $arg_output ]] && arg_output=a
-    arg_output_w="$(cygpath -w "${arg_output%.exe}")"
+    local arg_output_w="$(cygpath -w "${arg_output%.exe}.exe")"
     add_arg "-Fe$arg_output_w"
     output_object="${arg_output_w%.exe}.obj"
     if [[ ${#inputfiles[@]} -eq 1 ]]; then
