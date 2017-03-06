@@ -7,22 +7,22 @@ ICONV="nkf -w"
 declare -a clargs
 declare -a linkargs
 add_arg () {
-  while test $# -gt 0; do
+  local file
+  for file; do
     clargs[${#clargs[@]}]="$1"
-    shift
   done
 }
 add_larg () {
-  while test $# -gt 0; do
+  local file
+  for file; do
     linkargs[${#linkargs[@]}]="$1"
-    shift
   done
 }
 
 declare first_inputfile
 declare -a inputfiles
 push_inputfile () {
-  if test -z "$first_inputfile" -a -n "$1"; then
+  if [[ ! $first_inputfile && "$1" ]]; then
     first_inputfile="$1"
   fi
   inputfiles[${#inputfiles[*]}]="$1"
@@ -37,24 +37,24 @@ push_tmpfile () {
 
 #------------------------------------------------------------------------------
 add_incdir () {
-  test -n "$1" && add_arg "-I$(cygpath -w "$1")"
+  [[ $1 ]] && add_arg "-I$(cygpath -w "$1")"
 }
 add_libdir () {
-  test -n "$1" && add_larg "/LIBPATH:$(cygpath -w "$1")"
+  [[ $1 ]] && add_larg "/LIBPATH:$(cygpath -w "$1")"
 }
 add_define () {
-  test -n "$1" && add_arg "-D$1"
+  [[ $1 ]] && add_arg "-D$1"
 }
 add_output () {
-  test -n "$1" && arg_output="$1"
+  [[ $1 ]] && arg_output="$1"
 }
 declare arg_dep_output
 declare arg_dep_target
 arg_dep_output.set () {
-  test -n "$1" && arg_dep_output="$1"
+  [[ $1 ]] && arg_dep_output="$1"
 }
 arg_dep_target.push () {
-  test -n "$1" && arg_dep_target="$arg_dep_target${arg_dep_target:+ }$1"
+  [[ $1 ]] && arg_dep_target="$arg_dep_target${arg_dep_target:+ }$1"
 }
 function arg_dep_target.push-quoted {
   local file="$1" src dst
@@ -68,28 +68,25 @@ function arg_dep_target.push-quoted {
 search_object_file () {
   local file="$1"
   case "${file##*.}" in
-  o)
-      local file2="${file%.o}.obj"
-      if test -e "$file2"; then
-        echo "$file2"
-      else
-        echo "$file"
-      fi
-      ;;
-  a)
-      local file2="${file%.a}.lib"
-      local file3="${file2#lib}"
-      if test -e "$file3"; then
-        echo "$file3"
-      elif test -e "$file2"; then
-        echo "$file2"
-      else
-        echo "$file"
-      fi
-      ;;
-  *)
+  (o)
+    local file2="${file%.o}.obj"
+    if [[ -e $file2 ]]; then
+      echo "$file2"
+    else
       echo "$file"
-      ;;
+    fi ;;
+  (a)
+    local file2="${file%.a}.lib"
+    local file3="${file2#lib}"
+    if [[ -e $file3 ]]; then
+      echo "$file3"
+    elif [[ -e $file2 ]]; then
+      echo "$file2"
+    else
+      echo "$file"
+    fi ;;
+  (*)
+    echo "$file" ;;
   esac
 }
 
@@ -117,7 +114,7 @@ fG=''  # -g
 arg_link_specified=
 
 shopt -s extglob
-while test $# -gt 0; do
+while (($#)); do
   case "$1" in
   (--help) cl -? | $ICONV ; exit   ;;
   (--version) cl | $ICONV ; exit   ;;
@@ -133,12 +130,10 @@ while test $# -gt 0; do
   (-l)  shift; add_larg "$1.lib"     ;;
   (-l*)        add_larg "${1:2}.lib" ;;
   (-E|-O2|-O1|-Wall)
-      add_arg "$1"
-      ;;
+    add_arg "$1" ;;
   (-c)
     add_arg "$1"
-    fC='c'
-    ;;
+    fC='c' ;;
   (-g) add_arg "-Z7" ;;
   (-shared) add_arg "-LD" ;;
   #----------------------------------------------------------------------------
@@ -151,8 +146,7 @@ while test $# -gt 0; do
   (-fast)
     add_arg "-Ox"
     add_arg "-GL"
-    add_arg "-arch:SSE2"
-    ;;
+    add_arg "-arch:SSE2" ;;
   (-fomit-frame-pointer)
     add_arg "-Oy" ;;
   (-fno-omit-frame-pointer)
@@ -175,8 +169,7 @@ while test $# -gt 0; do
     # from standard input
     push_tmpfile __cxxtmp.-.cpp
     cat /dev/stdin > __cxxtmp.-.cpp
-    push_inputfile __cxxtmp.-.cpp
-    ;;
+    push_inputfile __cxxtmp.-.cpp ;;
   #----------------------------------------------------------------------------
   # language specification (ignore)
   (-x)     options:langspec "$2" "-x $2"; shift ;;
@@ -205,25 +198,20 @@ while test $# -gt 0; do
     -W)                    add_arg -Wall   ;; # 旧 gcc では -Wextra に等価?
     # TODO 色々の警告を追加
     -W*) echo "cxx-cl: unrecognized option '$1' (ignored)" ;;
-    esac
-    ;;
-  -*)
+    esac ;;
+  (-*)
     echo "cxx-cl: unrecognized option '$1'"
-    exit 1
-    ;;
-  *.@(c|C|cpp|cxx|cc))
-    push_inputfile "$1"
-    ;;
-  /link)
-    arg_link_specified=1
-    ;;
-  *)
-    if test -n "$arg_link_specified"; then
+    exit 1 ;;
+  (*.@(c|C|cpp|cxx|cc))
+    push_inputfile "$1" ;;
+  (/link)
+    arg_link_specified=1 ;;
+  (*)
+    if [[ $arg_link_specified ]]; then
       add_larg "$(search_object_file "$1")"
     else
       add_arg "$(search_object_file "$1")"
-    fi
-    ;;
+    fi ;;
   esac
   shift
 done
@@ -248,31 +236,31 @@ function adapter/msc/color_output {
 
 output_dependencies2 () {
   # determine dep_output
-  if test -n "$arg_dep_output"; then
+  if [[ $arg_dep_output ]]; then
     local dep_output="$arg_dep_output"
-  elif test -n "$fMD"; then
-    if test -n "$arg_output"; then
+  elif [[ $fMD ]]; then
+    if [[ $arg_output ]]; then
       local dep_output="${arg_output}.d"
-    elif test -n "$first_inputfile"; then
+    elif [[ $first_inputfile ]]; then
       local dep_output="$(echo -n "$first_inputfile"|sed 's/\.\(c\|C\|cpp\|cxx\|cc\)$//').d"
     else
       local dep_output=/dev/stdout
     fi
   else
-    if test -n "$arg_output"; then
+    if [[ $arg_output ]]; then
       local dep_output="$arg_output"
     else
       local dep_output=/dev/stdout
     fi
   fi
 
-  if test -n "$fMP"; then
+  if [[ $fMP ]]; then
     local dep_output_phony_targets=1
   else
     local dep_output_phony_targets=0
   fi
 
-  if test "$1" == MM; then
+  if [[ $1 == MM ]]; then
     # output only local dependencies
     local PWD_W="$(cygpath -w "$PWD/"|tr A-Z a-z|sed 's/[][\\\/()\^\$]/\\&/g')"
     #echo PWD_W=$PWD_W > /dev/stderr
@@ -285,16 +273,16 @@ output_dependencies2 () {
     local CORE='deps=deps " \\\n" line;';
   fi
 
-  local -a inputtmps
+  local file inputtmps
   for file in "${inputfiles[@]}"; do
-    test -e "$file" || continue
+    [[ -e $file ]] || continue
     case "$file" in
     (__cxxtmp.*.cpp)
       inputtmps[${#inputtmps[@]}]="$file"
       push_tmpfile "${tmp%.*}.obj"
       ;;
     (*.c|*.C|*.cpp|*.cxx|*.cc)
-      if test "${file%/*}" != "$file"; then
+      if [[ $file == */* ]]; then
         local tmp="${file%/*}/__cxxtmp.${file##*/}"
         local tmp_obj="__cxxtmp.${file##*/}"
         tmp_obj="${tmp_obj%.*}.obj"
@@ -472,9 +460,9 @@ force_link () {
   # to calm makefile
   local src="$1"
   local dst="$2" # must be same directory
-  test "$src" == "$dst" && return
-  test -h "$dst" && return
-  test -e "$dst" && /bin/rm "$dst"
+  [[ $src == "$dst" ]] && return
+  [[ -h $dst ]] && return
+  [[ -e $dst ]] && /bin/rm "$dst"
   ln -s "${src##*/}" "$dst"
 }
 
@@ -517,7 +505,7 @@ function generate_outputfile_arguments {
     fi
   fi
 
-  # if test -n "$fG" -a -n "$output_object"; then
+  # if [[ $fG && $output_object ]]; then
   #   add_arg "-Z7"
   #   # add_arg "-Fd${output_object%.obj}.pdb"
   # fi
@@ -525,9 +513,9 @@ function generate_outputfile_arguments {
 
 fAnotherCompileForDependencies=
 if [[ $fAnotherCompileForDependencies ]]; then
-  if test "$fMM" == M; then
+  if [[ $fMM == M ]]; then
     output_dependencies2 M
-  elif test "$fMM" == MM; then
+  elif [[ $fMM == MM ]]; then
     output_dependencies2 MM
   elif [[ $DEPENDENCIES_OUTPUT ]]; then
     arg_dep_output="$DEPENDENCIES_OUTPUT"
@@ -541,9 +529,9 @@ if [[ $fAnotherCompileForDependencies ]]; then
 else
   generate_outputfile_arguments
 
-  if test "$fMM" == M; then
+  if [[ $fMM == M ]]; then
     output_dependencies2 M
-  elif test "$fMM" == MM; then
+  elif [[ $fMM == MM ]]; then
     output_dependencies2 MM
   elif [[ $DEPENDENCIES_OUTPUT ]]; then
     arg_dep_output="$DEPENDENCIES_OUTPUT"
