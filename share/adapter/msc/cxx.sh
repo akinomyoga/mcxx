@@ -338,7 +338,7 @@ function initialize_fullpath_dict( _files,_len,_i,_file,_name){
 
     sub(/^.+\//,"",_name);
     fullpath_dict[_name]=_file;
-    # print "dbg: fullpath_dict[" _name "]=" _file >"/dev/stderr";
+    # print "\x1b[1mDEBUG\x1b[m: fullpath_dict[" _name "]=" _file > "/dev/stderr";
   }
 }
 
@@ -404,13 +404,15 @@ function print_stdout(line, _head,_note,_rest){
 }
 /^__cxxtmp\.[^ \n]+$/{
   output_deps();
+  sub(/\r$/,"");
   sub(/^__cxxtmp\./,"");
   print_stdout($0);
 
   input=$0;
+  # print "\x1b[1mDEBUG\x1b[m: input = '\''" $0 "'\''" > "/dev/stderr";
   if(fullpath_dict[input]!=""){
     input=fullpath_dict[input];
-    # print "dbg: found " $0 " -> " input >"/dev/stderr";
+    # print "\x1b[1mDEBUG\x1b[m (" $0 "): fullpath is " input > "/dev/stderr";
   }
 
   if(dep_target!=""){
@@ -427,9 +429,9 @@ function print_stdout(line, _head,_note,_rest){
   sub(/^(Note|メモ): (including file|インクルード ファイル): ?/,"");
 
   file=$0;
+  sub(/\r$/,"",file);
   sub(/^ */,"",file);
   gsub(/\\/,"/",file);
-  # gsub(/ /,"\\\\ ",file);
   gsub(/ /,"\\ ",file);
   gsub(/\$/,"$$");
   if(file ~ /^[a-zA-Z]:\//)
