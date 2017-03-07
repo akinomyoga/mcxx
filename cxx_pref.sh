@@ -27,13 +27,17 @@ generate_cxxprefix () {
 
     # check if it is vc
     local rex_msc_path='/Microsoft Visual Studio ([1-9][.0-9]*)/VC/bin/cl(.exe)?$'
-    if [[ "$CXX" =~ $rex_msc_path ]]; then
+    if [[ $CXX =~ $rex_msc_path ]]; then
       case "${BASH_REMATCH[1]}" in
       (9.0)  echo -n i686-win-vc-msc15 ; exit ;;
       (10.0) echo -n i686-win-vc-msc16 ; exit ;;
       (11.0) echo -n i686-win-vc-msc17 ; exit ;;
       (12.0) echo -n i686-win-vc-msc18 ; exit ;;
       (14.0) echo -n i686-win-vc-msc19 ; exit ;;
+      esac
+    elif local rex='/Microsoft Visual Studio/(2[0-9]{3})/(Community|Professional|Enterprise)/'; [[ $CXX =~ $rex ]]; then
+      case "${BASH_REMATCH[1]}" in
+      (2017)  echo -n i686-win-vc-msc19.10 ; exit ;;
       esac
     fi
 
@@ -63,7 +67,10 @@ generate_cxxprefix () {
       }
       /Microsoft ?\(R\) 32-bit C\/C\+\+ Optimizing Compiler Version/{
         if(match($0,/Version ([[:digit:]]+)\.([[:digit:]]+)/,dict)>0){
-          printf("i686-win-vc-msc%d",dict[1]);
+          if (dict[2] ~ /^0+$/)
+            printf("i686-win-vc-msc%d", dict[1]);
+          else
+            printf("i686-win-vc-msc%d.%d", dict[1], dict[2]);
           comp++;
           exit;
         }
@@ -86,7 +93,7 @@ generate_cxxprefix () {
     '
   )
 
-  if is_windows && test -z "${ret##*-cygwin-gcc-*}"; then
+  if is_windows && [[ $ret == *-cygwin-gcc-* ]]; then
     # test if it is mingw
 
     local ftmp="$(cygpath -w $CXXDIR/tmp.o)"
@@ -317,8 +324,8 @@ function cmd.prefix/add/register_pair {
       kcand="l${BASH_REMATCH[1]//./}"
     elif regex='-icc-([0-9]+)[.0-9]*$' && [[ $default_prefix =~ $regex ]]; then
       kcand="i${BASH_REMATCH[1]}"
-    elif regex='-vc-msc([0-9]+)$' && [[ $default_prefix =~ $regex ]]; then
-      kcand="v${BASH_REMATCH[1]}"
+    elif regex='-vc-msc([0-9]+)\.([0-9]*)$' && [[ $default_prefix =~ $regex ]]; then
+      kcand="v${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
     fi
 
     if [[ $kcand && ! -s $dirpref/key+$kcand.stamp ]]; then

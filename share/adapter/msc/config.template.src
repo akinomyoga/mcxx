@@ -6,12 +6,12 @@
 
 VisualStudioVersion='%%VisualStudioVersion%%'
 
-wP32DIR='%%wPDIR%%'
-wWINDIR='%%wWDIR%%'
 uP32DIR='%%uPDIR%%'
-wWINDIR='%%uWDIR%%'
-wVSDIR="$wP32DIR\Microsoft Visual Studio $VisualStudioVersion"
-uVSDIR="$uP32DIR/Microsoft Visual Studio $VisualStudioVersion"
+wP32DIR='%%wPDIR%%'
+uWINDIR='%%uWDIR%%'
+wWINDIR='%%wWDIR%%'
+uVSDIR='%%uVSDIR%%'
+wVSDIR='%%wVSDIR%%'
 
 wP64DIR='C:\Program Files'
 uP64DIR='/cygdrive/c/Program Files'
@@ -31,7 +31,7 @@ mcxx/adapters/msc/fill-envvar-dir VS140COMNTOOLS  "$wP32DIR"'\Microsoft Visual S
 mcxx/adapters/msc/fill-envvar-dir VSSDK90Install  "$wP32DIR"'\Microsoft Visual Studio 2008 SDK\'
 mcxx/adapters/msc/fill-envvar-dir VSSDK140Install "$wP32DIR"'\Microsoft Visual Studio 14.0\VSSDK\'
 
-# 9.0 - 14.0 共通の変数
+# 9.0 - 15.0 共通の変数
 export VCINSTALLDIR="$wVSDIR"'\VC\'
 export VSINSTALLDIR="$wVSDIR"'\'
 export FrameworkDIR32="$wWINDIR"'\Microsoft.NET\Framework\'
@@ -50,7 +50,7 @@ case "$VisualStudioVersion" in
 (9.0)
   export FrameworkVersion=v2.0.50727
   export WindowsSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v7.0A\'
-  uWindowsSdkDir="$wP32DIR"'\Microsoft SDKs\Windows\v7.0A\'
+  uWindowsSdkDir="$uP32DIR"'/Microsoft SDKs/Windows/v7.0A'
   mcxx_msc_netfx_ver1=v3.5
   mcxx_msc_netfx_ver2=v2.0.50727
   mcxx/msc/set-path INCLUDE \
@@ -231,6 +231,91 @@ case "$VisualStudioVersion" in
     "$uWindowsSdkDir"'/bin/x86' \
     "$uP32DIR"'/Microsoft SDKs/Windows/v10.0A/bin/NETFX 4.6.1 Tools'
   ;;
+
+(15.0)
+  export VS150COMNTOOLS="$wVSDIR\\Common7\\Tools\\"
+
+  # Visual Studio Install
+  export VisualStudioVersion="15.0"
+  export VSCMD_ARG_HOST_ARCH="x86"
+  export VSCMD_ARG_TGT_ARCH="x86"
+  export VSCMD_ARG_app_plat="Desktop"
+  export VSCMD_VER="15.0.26228.4"
+
+  # DevEnv
+  export Framework40Version="v4.0"
+  export FrameworkVersion="v4.0.30319"
+  export FrameworkVersion32="v4.0.30319"
+
+  # Win SDK
+  uWindowsSdkDir="$uP32DIR/Windows Kits/10"
+  export WindowsSdkDir="$wP32DIR\\Windows Kits\\10\\"
+  export WindowsLibPath="${WindowsSdkDir}UnionMetadata;${WindowsSdkDir}References"
+  export WindowsSdkBinPath="${WindowsSdkDir}bin\\"
+  export WindowsSDKLibVersion="10.0.14393.0\\"
+  export WindowsSDKVersion="10.0.14393.0\\"
+  export WindowsSDK_ExecutablePath_x64="$wP32DIR\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6.1 Tools\\x64\\"
+  export WindowsSDK_ExecutablePath_x86="$wP32DIR\\Microsoft SDKs\\Windows\\v10.0A\\bin\\NETFX 4.6.1 Tools\\"
+  export WindowsSdkVerBinPath="${WindowsSdkDir}bin\\10.0.14393.0\\"
+
+  # Universal CRT (?)
+  export UniversalCRTSdkDir="$WindowsSdkDir"
+  export UCRTVersion="10.0.14393.0"
+
+  # .NET Frameworks SDK
+  export NETFXSDKDir="$wP32DIR\\Windows Kits\\NETFXSDK\\4.6.1\\"
+  export __DOTNET_ADD_32BIT="1"
+  export __DOTNET_PREFERRED_BITNESS="32"
+
+  # VC
+  MCXX_VCFULLVER='%%MCXX_VCFULLVER%%'
+  export VCIDEInstallDir="$wVSDIR\\Common7\\IDE\\VC\\"
+  export VCINSTALLDIR="$wVSDIR\\VC\\"
+  export VCToolsInstallDir="$wVSDIR\\VC\\Tools\\MSVC\\$MCXX_VCFULLVER\\"
+  export VCToolsRedistDir="$wVSDIR\\VC\\Redist\\MSVC\\$MCXX_VCFULLVER\\"
+
+  # F#
+  export ExtensionSdkDir="$wP32DIR\\Microsoft SDKs\\Windows Kits\\10\\ExtensionSDKs"
+  export FSHARPINSTALLDIR="$wP32DIR\\Microsoft SDKs\\F#\\4.1\\Framework\\v4.0\\"
+
+  export __VSCMD_PREINIT_PATH="$PATH"
+  mcxx/msc/PATH.prepend \
+    "$uVSDIR/VC/Tools/MSVC/$MCXX_VCFULLVER/bin/HostX86/x86" \
+    "$uVSDIR/Common7/IDE/VC/VCPackages" \
+    "$uP32DIR/Microsoft SDKs/TypeScript/2.1" \
+    "$uVSDIR/Common7/IDE/CommonExtensions/Microsoft/TestWindow" \
+    "$uVSDIR/Common7/IDE/CommonExtensions/Microsoft/TeamFoundation/Team Explorer" \
+    "$uVSDIR/MSBuild/15.0/bin/Roslyn" \
+    "$uVSDIR/Team Tools/Performance Tools" \
+    "$uP32DIR/Microsoft Visual Studio/Shared/Common/VSPerfCollectionTools" \
+    "$uP32DIR/Microsoft SDKs/Windows/v10.0A/bin/NETFX 4.6.1 Tools" \
+    "$uP32DIR/Microsoft SDKs/F#/4.1/Framework/v4.0" \
+    "$uWindowsSdkDir/bin/x86" \
+    "$uWindowsSdkDir/bin/10.0.14393.0/x86" \
+    "$uVSDIR/MSBuild/15.0/bin" \
+    "$uWINDIR/Microsoft.NET/Framework/v4.0.30319" \
+    "$uVSDIR/Common7/IDE" \
+    "$uVSDIR/Common7/Tools"
+  mcxx/msc/set-path INCLUDE \
+                    "${VCToolsInstallDir}ATLMFC\\include" \
+                    "${VCToolsInstallDir}include" \
+                    "${NETFXSDKDir}include\\um" \
+                    "${WindowsSdkDir}include\\10.0.14393.0\\ucrt" \
+                    "${WindowsSdkDir}include\\10.0.14393.0\\shared" \
+                    "${WindowsSdkDir}include\\10.0.14393.0\\um" \
+                    "${WindowsSdkDir}include\\10.0.14393.0\\winrt"
+  mcxx/msc/set-path LIB \
+                    "${VCToolsInstallDir}ATLMFC\\lib\\x86" \
+                    "${VCToolsInstallDir}lib\\x86" \
+                    "${NETFXSDKDir}lib\\um\\x86" \
+                    "${WindowsSdkDir}lib\\10.0.14393.0\\ucrt\\x86" \
+                    "${WindowsSdkDir}lib\\10.0.14393.0\\um\\x86"
+  mcxx/msc/set-path LIBPATH \
+                    "${VCToolsInstallDir}ATLMFC\\lib\\x86" \
+                    "${VCToolsInstallDir}lib\\x86" \
+                    "${WindowsSdkDir}UnionMetadata" \
+                    "${WindowsSdkDir}References" \
+                    "$uWINDIR\\Microsoft.NET\\Framework\\v4.0.30319;"
 esac
 
 #------------------------------------------------------------------------------
