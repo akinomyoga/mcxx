@@ -156,7 +156,7 @@ M1.1 インストール用のスクリプトに関し @2013-10-24
 
   • 既存のディレクトリへのコピー
   • パスの通っている場所への symbolic link
-  • echox を中に取り込む事完
+  • [DEL:echox を中に取り込む事:DEL] 完
   • デフォルトの CXXKEY を決定して、cxx_pref/key+default.stamp に書き込む事
 
 インストール用のスクリプト install.sh を作成し、 make install でこれを実行する
@@ -241,13 +241,13 @@ ChangeLog
   • 2013-10-23, KM, mcxx-2.1.2
       □ usage: cxx +prefix set-key <cxxkey/prefix> <newkey> 対応
 
-        prefix 編集機能: 既に作成した設定の cxxkey の変更
+        [DEL:prefix 編集機能: 既に作成した設定の cxxkey の変更:DEL]
 
   • 2013-10-21, KM, mcxx-2.1.1
       □ usage: cxx mwg prefix remove <cxxkey/cxxprefix> 対応
       □ usage: cxx mwg prefix set-default <cxxkey/cxxprefix> 対応
 
-        prefix 編集機能: デフォルトの cxxkey の変更
+        [DEL:prefix 編集機能: デフォルトの cxxkey の変更:DEL]
 
       □ usage: cxx mwg * の形式を cxx +* に変更 (取り敢えずは mwg の形式も保持
         するが廃止予定)。
