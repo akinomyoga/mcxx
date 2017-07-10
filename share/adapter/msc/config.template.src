@@ -190,26 +190,32 @@ case "$VisualStudioVersion" in
   export FSHARPINSTALLDIR="$wP32DIR"'\Microsoft SDKs\F#\4.0\Framework\v4.0\'
   export NETFXSDKDir="$wP32DIR"'\Windows Kits\NETFXSDK\4.6.1\'
   export WindowsLibPath="$wP32DIR"'\Windows Kits\10\UnionMetadata;'"$wP32DIR"'\Windows Kits\10\References'
-  export WindowsSDKLibVersion='10.0.14393.0\'
-  export WindowsSDKVersion='10.0.14393.0\'
-  export WindowsSDK_ExecutablePath_x64="$wP32DIR"'\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\x64\'
-  export WindowsSDK_ExecutablePath_x86="$wP32DIR"'\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\'
   export WindowsSdkDir="$wP32DIR"'\Windows Kits\10\'
   uWindowsSdkDir="$uP32DIR"'/Windows Kits/10'
+  export WindowsSDKVersion='10.0.14393.0\'
+  for version in 10.0.14393.0 10.0.10150.0 10.0.10240.0 10.0.10586.0; do
+    if [[ -d $uWindowsSdkDir/$version ]]; then
+      WindowsSDKVersion=$version'\'
+      break
+    fi
+  done
+  export WindowsSDKLibVersion="$WindowsSDKVersion"
+  export WindowsSDK_ExecutablePath_x64="$wP32DIR"'\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\x64\'
+  export WindowsSDK_ExecutablePath_x86="$wP32DIR"'\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.6.1 Tools\'
   mcxx/msc/set-path INCLUDE \
                     "$VCINSTALLDIR"'INCLUDE' \
                     "$VCINSTALLDIR"'ATLMFC\INCLUDE' \
-                    "$WindowsSdkDir"'include\10.0.14393.0\ucrt' \
+                    "$WindowsSdkDir"'include\'"${WindowsSDKVersion}"'ucrt' \
                     "$wP32DIR"'\Windows Kits\NETFXSDK\4.6.1\include\um' \
-                    "$WindowsSdkDir"'include\10.0.14393.0\shared' \
-                    "$WindowsSdkDir"'include\10.0.14393.0\um' \
-                    "$WindowsSdkDir"'include\10.0.14393.0\winrt'
+                    "$WindowsSdkDir"'include\'"${WindowsSDKVersion}"'shared' \
+                    "$WindowsSdkDir"'include\'"${WindowsSDKVersion}"'um' \
+                    "$WindowsSdkDir"'include\'"${WindowsSDKVersion}"'winrt'
   mcxx/msc/set-path LIB \
                     "$VCINSTALLDIR"'LIB' \
                     "$VCINSTALLDIR"'ATLMFC\LIB' \
-                    "$WindowsSdkDir"'lib\10.0.14393.0\ucrt\x86' \
+                    "$WindowsSdkDir"'lib\'"${WindowsSDKVersion}"'ucrt\x86' \
                     "$wP32DIR"'\Windows Kits\NETFXSDK\4.6.1\lib\um\x86' \
-                    "$WindowsSdkDir"'lib\10.0.14393.0\um\x86'
+                    "$WindowsSdkDir"'lib\'"${WindowsSDKVersion}"'um\x86'
   mcxx/msc/set-path LIBPATH \
                     "$wWINDIR"'\Microsoft.NET\Framework\v4.0.30319' \
                     "$VCINSTALLDIR"'LIB' \
