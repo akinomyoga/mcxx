@@ -1,8 +1,12 @@
 #!/bin/bash
 
-#ICONV=cat
-#ICONV="iconv -c -f cp932 -t utf-8"
-ICONV="nkf -w"
+if type nkf &>/dev/null; then
+  ICONV="nkf -w"
+elif type iconv &>/dev/null; then
+  ICONV="iconv -c -f cp932 -t utf-8"
+else
+  ICONV=cat
+fi
 
 declare -a clargs
 declare -a linkargs
