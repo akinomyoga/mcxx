@@ -358,24 +358,22 @@ function output_deps(){
     delete included[file];
 }
 
-function print_stdout(line, _head,_note,_rest){
+function print_stdout(line, _head,_note,_rest,_m){
   if(istty){
     if(line ~ /^ {8}/)line=substr(line,5);
     sgr_error="\x1b[31;38;5;131m";
     sgr_quote="\x1b[32;38;5;28m";
     if(line ~ /^Microsoft ?\(R\) /||line ~ /^Copyright \(C\) /){
       line="\x1b[1;36;38;5;25m" line "\x1b[m";
-    }else if(match(line,/^(([^ ]| [^:]| :[^ ])*) : /)>0){
-      _head=substr(line,1,RLENGTH-3);
-      _rest=substr(line,RLENGTH+1);
-      if(match(_rest,/^( *[[:alpha:]][ [:alpha:]]* C[0-9]+)/)>0){
-        _note="\x1b[1m" sgr_error substr(_rest,1,RLENGTH) "\x1b[m"
-        _rest=substr(_rest,RLENGTH+1);
-      }else{
-        _note="";
-      }
+    } else if(match(line, /^(([^:]|:[^ ])*[^0-9]:)( ([[:alpha:]]+ C[0-9]+) ?:)?/, _m) > 0) {
+      _head = _m[1];
+      _note = _m[3];
+      _rest = substr(line, RLENGTH + 1);
+
+      if (_note != "") _note = "\x1b[1m" sgr_error _note "\x1b[m";
       gsub('"/'[^']*'/"',sgr_quote "&\x1b[m",_rest);
-      line="\x1b[1m" _head "\x1b[m : " _note _rest;
+
+      line="\x1b[1m" _head "\x1b[m" _note _rest;
     }else if(!(line ~ /^[[:space:]]/)){
       line="\x1b[36;38;5;25m" line "\x1b[m";
     }else{
