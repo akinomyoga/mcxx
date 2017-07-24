@@ -322,121 +322,126 @@ output_dependencies2 () {
 #   fullpath_dict: 入力ファイル名 → 入力ファイルパス の辞書を作成する。
 #   環境変数 mcxx_inputfiles を ; で区切って入力ファイル名とする。
 # @var[out] fullpath_dict[name] = file
-function initialize_fullpath_dict( _files,_len,_i,_file,_name){
-  _len=split(ENVIRON["mcxx_inputfiles"],_files,";");
-  for(_i=1;_i<=_len;_i++){
-    _file=_files[_i];
-    _name=_file;
+function initialize_fullpath_dict( _files, _len, _i, _file, _name) {
+  _len = split(ENVIRON["mcxx_inputfiles"], _files, ";");
+  for (_i = 1; _i <= _len; _i++) {
+    _file = _files[_i];
+    _name = _file;
 
-    sub(/^.+\//,"",_name);
-    fullpath_dict[_name]=_file;
+    sub(/^.+\//, "", _name);
+    fullpath_dict[_name] = _file;
     # print "\x1b[1mDEBUG\x1b[m: fullpath_dict[" _name "]=" _file > "/dev/stderr";
   }
 }
 
-BEGIN{
-  dep_target="'"$arg_dep_target"'"
+BEGIN {
+  dep_target = "'"$arg_dep_target"'";
+  arg_output = "'"$arg_output"'";
   initialize_fullpath_dict();
 }
 
-function phony_add(file){
-  if(phony_added[file])return;
-  phony_added[file]=1;
-  phony_targets=phony_targets file ": \n\n";
+function phony_add(file) {
+  if (phony_added[file]) return;
+  phony_added[file] = 1;
+  phony_targets = phony_targets file ": \n\n";
 }
-function phony_print(file){
-  if('$dep_output_phony_targets'){
+function phony_print(file) {
+  if ('$dep_output_phony_targets') {
     print phony_targets
   }
 }
 
-function output_deps(){
-  if(deps=="")return;
+function output_deps() {
+  if (deps == "") return;
   print deps "\n";
-  deps="";
-  for(file in included)
+  deps = "";
+  for (file in included)
     delete included[file];
 }
 
-function print_stdout(line, _head,_note,_rest,_m){
-  if(istty){
-    if(line ~ /^ {8}/)line=substr(line,5);
-    sgr_error="\x1b[31;38;5;131m";
-    sgr_quote="\x1b[32;38;5;28m";
-    if(line ~ /^Microsoft ?\(R\) /||line ~ /^Copyright \(C\) /){
-      line="\x1b[1;36;38;5;25m" line "\x1b[m";
-    } else if(match(line, /^(([^:]|:[^ ])*[^0-9]:)( ([[:alpha:]]+ C[0-9]+) ?:)?/, _m) > 0) {
+function print_stdout(line, _head, _note, _rest, _m) {
+  if (istty) {
+    if (line ~ /^ {8}/) line = substr(line, 5);
+    sgr_error = "\x1b[31;38;5;131m";
+    sgr_quote = "\x1b[32;38;5;28m";
+    if (line ~ /^Microsoft ?\(R\) / || line ~ /^Copyright \(C\) /) {
+      line = "\x1b[1;36;38;5;25m" line "\x1b[m";
+    } else if (match(line, /^(([^:]|:[^ ])*[^0-9]:)( ([[:alpha:]]+ C[0-9]+) ?:)?/, _m) > 0) {
       _head = _m[1];
       _note = _m[3];
       _rest = substr(line, RLENGTH + 1);
 
       if (_note != "") _note = "\x1b[1m" sgr_error _note "\x1b[m";
-      gsub('"/'[^']*'/"',sgr_quote "&\x1b[m",_rest);
+      gsub('"/'[^']*'/"', sgr_quote "&\x1b[m", _rest);
 
-      line="\x1b[1m" _head "\x1b[m" _note _rest;
-    }else if(!(line ~ /^[[:space:]]/)){
-      line="\x1b[36;38;5;25m" line "\x1b[m";
-    }else{
-      gsub('"/'[^']*'/"',sgr_quote "&\x1b[m",line);
+      line = "\x1b[1m" _head "\x1b[m" _note _rest;
+    } else if (!(line ~ /^[[:space:]]/)) {
+      line = "\x1b[36;38;5;25m" line "\x1b[m";
+    } else {
+      gsub('"/'[^']*'/"', sgr_quote "&\x1b[m", line);
     }
-    line="  " line;
+    line = "  " line;
   }
   print line > "/dev/stderr"
 }
 
-/^__cxxtmp\.-\.cpp$/{
+/^__cxxtmp\.-\.cpp$/ {
   output_deps();
-  if(dep_target!="")
-    deps=dep_target ": "
+  if (dep_target != "")
+    deps = dep_target ": ";
+  else if (arg_output != "")
+    deps = arg_output ": ";
   else
-    deps="-: ";
+    deps = "-: ";
   next;
 }
-/^__cxxtmp\.[^ \n]+$/{
+/^__cxxtmp\.[^ \n]+$/ {
   output_deps();
-  sub(/\r$/,"");
-  sub(/^__cxxtmp\./,"");
+  sub(/\r$/, "");
+  sub(/^__cxxtmp\./, "");
   print_stdout($0);
 
-  input=$0;
+  input = $0;
   # print "\x1b[1mDEBUG\x1b[m: input = '\''" $0 "'\''" > "/dev/stderr";
-  if(fullpath_dict[input]!=""){
-    input=fullpath_dict[input];
+  if (fullpath_dict[input] != "") {
+    input = fullpath_dict[input];
     # print "\x1b[1mDEBUG\x1b[m (" $0 "): fullpath is " input > "/dev/stderr";
   }
 
-  if(dep_target!=""){
-    deps=dep_target ": " input;
-  }else{
-    obj=$0;
-    sub(/\.(cpp|cc|cxx|C|c)?$/,".obj",obj);
-    deps=obj ": " input;
+  if (dep_target != "") {
+    deps = dep_target ": " input;
+  } else if (arg_output != "") {
+    deps = arg_output ": " input;
+  } else {
+    obj = $0;
+    sub(/\.(cpp|cc|cxx|C|c)?$/, ".obj", obj);
+    deps = obj ": " input;
   }
   next;
 }
-/^(Note|メモ): (including file|インクルード ファイル): ?/{
-  if(deps=="")deps="-: "
-  sub(/^(Note|メモ): (including file|インクルード ファイル): ?/,"");
+/^(Note|メモ): (including file|インクルード ファイル): ?/ {
+  if (deps == "") deps = "-: ";
+  sub(/^(Note|メモ): (including file|インクルード ファイル): ?/, "");
 
-  file=$0;
-  sub(/\r$/,"",file);
-  sub(/^ */,"",file);
-  gsub(/\\/,"/",file);
-  gsub(/ /,"\\ ",file);
-  gsub(/\$/,"$$");
-  if(file ~ /^[a-zA-Z]:\//)
-    file="/cygdrive/" tolower(substr(file,1,1)) substr(file,3);
+  file = $0;
+  sub(/\r$/, "", file);
+  sub(/^ */, "", file);
+  gsub(/\\/, "/", file);
+  gsub(/ /, "\\ ", file);
+  gsub(/\$/, "$$");
+  if (file ~ /^[a-zA-Z]:\//)
+    file = "/cygdrive/" tolower(substr(file, 1, 1)) substr(file, 3);
 
   # guard
-  if(included[file])next;
-  included[file]=1;
+  if (included[file]) next;
+  included[file] = 1;
   phony_add(file);
 
-  # pad=$0;
+  # pad = $0;
   # sub(/[^ ].*$/,"",pad);
-  pad=" "
+  pad = " "
 
-  line=pad file;
+  line = pad file;
 
   '"$CORE"'
   next;
@@ -444,7 +449,7 @@ function print_stdout(line, _head,_note,_rest,_m){
 {
   print_stdout($0);
 }
-END{
+END {
   output_deps();
   phony_print();
 }
@@ -487,29 +492,33 @@ function simple_compile {
   fi
 }
 
+## @var[in] fC,inputfiles,clargs
+## @var[in,out] arg_output
 function generate_outputfile_arguments {
+  local wpath_obj= wpath_exe=
   if [[ $fC ]]; then
     if [[ $arg_output && ${#inputfiles[@]} -eq 1 ]]; then
-      if [[ ${arg_output##*.} == o ]]; then
-        force_link "${arg_output%.o}.obj" "$arg_output"
-        arg_output="${arg_output%.o}.obj"
+      wpath_obj=$arg_output
+      if [[ ${wpath_obj##*.} == o ]]; then
+        force_link "${wpath_obj%.o}.obj" "$wpath_obj"
+        wpath_obj="${wpath_obj%.o}.obj"
       fi
-      output_object=$(cygpath -w "${arg_output}")
-      add_arg "-Fo$output_object"
+      wpath_obj=$(cygpath -w "$wpath_obj")
+      add_arg "-Fo$wpath_obj"
     fi
   else
-    [[ -z $arg_output ]] && arg_output=a
-    local arg_output_w="$(cygpath -w "${arg_output%.exe}.exe")"
-    add_arg "-Fe$arg_output_w"
-    output_object="${arg_output_w%.exe}.obj"
+    [[ ! $arg_output ]] && arg_output=a.exe
+    wpath_exe=$(cygpath -w "${arg_output%.exe}.exe")
+    add_arg "-Fe$wpath_exe"
+    wpath_obj="${wpath_exe%.exe}.obj"
     if [[ ${#inputfiles[@]} -eq 1 ]]; then
-      add_arg "-Fo$output_object"
+      add_arg "-Fo$wpath_obj"
     fi
   fi
 
-  # if [[ $fG && $output_object ]]; then
+  # if [[ $fG && $wpath_obj ]]; then
   #   add_arg "-Z7"
-  #   # add_arg "-Fd${output_object%.obj}.pdb"
+  #   # add_arg "-Fd${wpath_obj%.obj}.pdb"
   # fi
 }
 
