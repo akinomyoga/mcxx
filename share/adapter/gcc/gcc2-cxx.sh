@@ -12,6 +12,9 @@ else
   function array.push { eval "$1+=(\"\${$1[@]}\" \"\${@:2}\")"; }
 fi
 
+#------------------------------------------------------------------------------
+# read arguments
+
 arg_input=
 function process-input {
   [[ -f $1 && ! $arg_input ]] && arg_input="$1"
@@ -49,6 +52,7 @@ function process-option:-MQ {
 
 dep_output_set=
 dep_output=
+dep_phony=
 function process-option:-MF {
   dep_output_set=1
   dep_output="$1"
@@ -67,6 +71,7 @@ function read-arguments {
     (-MT*) process-option:-MT "${arg#-MT}" ;;
     (-MQ)  process-option:-MQ "$1"; shift ;;
     (-MQ*) process-option:-MQ "${arg#-MQ}" ;;
+    (-MP) dep_phony=1 ;;
     (-MD|-MMD)
       dep_enabled=1
       array.push args "$arg" ;;
@@ -81,6 +86,55 @@ function read-arguments {
 }
 
 read-arguments "$@"
+
+#------------------------------------------------------------------------------
+
+function dependency/add-phony-targets {
+  local src=$1
+  local dst=$2
+  gawk '
+    BEGIN {
+      MODE_NORMAL = 1;
+      MODE_CONTINUE = 2;
+      mode = MODE_NORMAL;
+    }
+
+    function process_line(line, _, w, n, i, ch) {
+      if (!sub(/^.*:/, "", line)) return;
+      n = length(line);
+      w = "";
+      for (i = 1; i <= n; i++) {
+        ch = substr(line, i, 1);
+        if (ch ~ /[[:space:]]/) {
+          if (w == "") continue;
+          depend[w] = 1;
+          w = "";
+        } else if (ch == "\\") {
+          w = w substr(line, i, 2);
+          i++;
+        } else {
+          w = w ch;
+        }
+      }
+    }
+    function output_phony(k, n, i) {
+      #for (k in depend) printf("%s:\n\n", k);
+      n = asorti(depend);
+      for (i = 1; i <= n; i++) printf("%s:\n\n", depend[i]);
+    }
+
+    {
+      print;
+      line = line $0;
+      if (!sub(/\\$/, " ", line)) process_line(line);
+    }
+    END {
+      process_line(line);
+      output_phony();
+    }
+  ' "$src" "$dst"
+}
+
 
 [[ $mcxx_verbose ]] && echo "$mcxx_gxx" "${args[@]}" >&2
 "$mcxx_gxx" "${args[@]}"
@@ -140,8 +194,11 @@ if [[ $dep_enabled ]]; then
       sed -e "$dep_target_sed" "$dep_output" > "$dep_output.tmp" &&
         mv -- "$dep_output.tmp" "$dep_output"
     fi
+    if [[ $dep_phony ]]; then
+      dependency/add-phony-targets "$dep_output" > "$dep_output.tmp" &&
+        mv -- "$dep_output.tmp" "$dep_output"
+    fi
   fi
 fi
-
 
 exit "$exit"
