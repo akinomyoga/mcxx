@@ -28,7 +28,7 @@ function mingw.create-config {
   mingw/is_cygwin && [[ "$CXXPREFIX" =~ -mingw- ]] || return 2
   echom 'compiler type = mingw'
 
-  local mwg_echox_prog='mcxx+prefix(mingw.create-config)'
+  local mshex_echox_prog='mcxx+prefix(mingw.create-config)'
   local CXXDIR2="${1%/}"
   if test ! -d "$CXXDIR2"; then
     echoe 'specified directory does not exist'

@@ -149,7 +149,7 @@ function gcc.create-config {
   # = all compiler (その他)
   echom 'compiler type = default (gcc)'
 
-  local mwg_echox_prog='mcxx+prefix(gcc.create-config)'
+  local mshex_echox_prog='mcxx+prefix(gcc.create-config)'
   local CXXDIR2="${1%/}"
   if test ! -d "$CXXDIR2"; then
     echoe 'specified directory does not exist'

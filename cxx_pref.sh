@@ -7,7 +7,7 @@ if [[ ! -d $CXXDIR ]]; then
 fi
 
 source "$CXXDIR/ext/echox" --color=auto
-mwg_echox_prog="mcxx($CXXDIR) +prefix"
+mshex_echox_prog="mcxx($CXXDIR) +prefix"
 
 mkd () { test -d "$1" || mkdir -p "$1"; }
 ends_with () { test "${1%$2}" != "$1"; }
@@ -126,7 +126,7 @@ function adapters.initialize {
 }
 
 function cmd.prefix/add {
-  local mwg_echox_prog='mcxx +prefix add'
+  local mshex_echox_prog='mcxx +prefix add'
 
   local a_quiet=
   local a_default=
@@ -487,7 +487,7 @@ function cxxpair.update {
 }
 
 function cmd.prefix/auto () {
-  local mwg_echox_prog='mcxx +prefix auto'
+  local mshex_echox_prog='mcxx +prefix auto'
 
   PLATFORM.initialize
   adapters.initialize
@@ -552,7 +552,7 @@ function get_cxxpair_fromKeyOrPrefix {
 }
 
 cmd.prefix/remove() {
-  local mwg_echox_prog='mcxx +prefix remove'
+  local mshex_echox_prog='mcxx +prefix remove'
 
   # check argument $1
   if test -z "$1"; then
@@ -590,7 +590,7 @@ cmd.prefix/remove() {
 }
 
 cmd.prefix/set-default() {
-  local mwg_echox_prog='mcxx +prefix set-default'
+  local mshex_echox_prog='mcxx +prefix set-default'
 
   # check argument $1
   if test -z "$1"; then
@@ -624,7 +624,7 @@ cmd.prefix/set-default() {
 }
 
 function cmd.prefix/set-key {
-  local mwg_echox_prog='mcxx +prefix set-key'
+  local mshex_echox_prog='mcxx +prefix set-key'
 
   if test -z "$1"; then
     echoe "a key nor a prefix is specified"

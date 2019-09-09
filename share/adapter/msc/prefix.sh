@@ -63,7 +63,7 @@ function msc.create-config {
   msc/ends_with "${CXX%.exe}" cl || return 2
   echom 'compiler type = msc'
 
-  local mwg_echox_prog='mcxx+prefix(msc.create-config)'
+  local mshex_echox_prog='mcxx+prefix(msc.create-config)'
   local CXXDIR2="${1%/}"
   if [[ ! -d $CXXDIR2 ]]; then
     echoe 'specified directory does not exist'
