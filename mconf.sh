@@ -600,7 +600,7 @@ function mconf/test/expression {
       elif [[ ! $expression ]]; then
         expression="$arg"
       else
-        echo -Ep mconf/test/expression "ignored argument '$arg'."
+        mconf/echo -Ep mconf/test/expression "ignored argument '$arg'."
       fi ;;
     esac
   done
@@ -617,7 +617,7 @@ function mconf/test/expression {
   fi
 
   if [[ ! $expression ]]; then
-    echo -Ep mconf/test/expression 'expression is not specified!'
+    mconf/echo -Ep mconf/test/expression 'expression is not specified!'
     return 1
   fi
 
@@ -686,7 +686,9 @@ function mconf/test/source {
 
   : "${title:="${def_name:-"$source"}"}"
 
-  if [[ ! $fAbsoluteName ]]; then
+  if [[ ! $def_name || $def_name == - ]]; then
+    def_name=
+  elif [[ ! $fAbsoluteName ]]; then
     local ret; mconf/string#toupper "${def_name//[!0-9a-zA-Z]/_}"; def_name=$ret
     [[ "$def_name" =~ ^MWGCONF_ ]] || def_name="MWGCONF_$def_name"
   else
